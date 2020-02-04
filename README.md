@@ -18,6 +18,14 @@ Before using the *medco-loader* you need to have MedCo up and running on your ma
 ## How to use it
 A detailed up-to-date guide on how to use the *medco-loader* is available [here](https://ldsec.gitbook.io/medco-documentation/system-administrator-guide/loading-data).
 
+## Source code organization
+- *app*: *medco-loader* command line interface
+- *deployment*: docker configuration files
+- *loader*: *medco-loader* logic
+    - *genomic*: genomic loader logic
+    - *i2b2*: i2b2 loader logic
+    - *identifiers*: logic managing the identifiers that are meant to be encrypted by [unlynx](https://github.com/ldsec/unlynx) to answer queries
+
 ## Useful information
 *medco-loader* is part of the MedCo system.
 
