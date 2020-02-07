@@ -2,17 +2,19 @@ package loaderi2b2
 
 import (
 	"encoding/csv"
-	"github.com/ldsec/medco-loader/loader"
-	"github.com/ldsec/medco-unlynx/services"
-	"github.com/ldsec/unlynx/lib"
-	"go.dedis.ch/kyber/v3"
-	"go.dedis.ch/onet/v3"
-	"go.dedis.ch/onet/v3/log"
+	"fmt"
 	"math/rand"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ldsec/medco-loader/loader"
+	servicesmedco "github.com/ldsec/medco-unlynx/services"
+	libunlynx "github.com/ldsec/unlynx/lib"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/onet/v3"
+	"go.dedis.ch/onet/v3/log"
 )
 
 // Files is the object structure behind the files.toml
@@ -227,6 +229,9 @@ func LoadI2B2Data(el *onet.Roster, entryPointIdx int, directory string, files Fi
 	if err != nil {
 		return err
 	}
+
+	EventObservationBlobEncrypted, err = EncryptEventBlob(EventObservationBlob, el, entryPointIdx)
+
 	err = ConvertObservationFact()
 	if err != nil {
 		return err
@@ -1259,6 +1264,7 @@ func ParseObservationFact() error {
 	}
 
 	TableObservationFact = make(map[*ObservationFactPK]ObservationFact)
+	EventObservationBlob = make(map[*ObservationFactPK]string)
 	HeaderObservationFact = make([]string, 0)
 	MapPatientObs = make(map[string][]*ObservationFactPK)
 	MapDummyObs = make(map[string][]*ObservationFactPK)
@@ -1313,6 +1319,11 @@ func ParseObservationFact() error {
 		if _, ok := ListConceptsToIgnore[ofk.ConceptCD]; !ok {
 			TableObservationFact[ofk] = of
 
+			//if fact is a survival analysis
+			if IsSurvivalFact(ofk) {
+				EventObservationBlob[ofk] = of.ObservationBlob
+			}
+
 			// if patient does not exist
 			if _, ok := MapPatientObs[ofk.PatientNum]; !ok {
 				// create array and add the observation
@@ -1352,8 +1363,20 @@ func ConvertObservationFact() error {
 	// remove the last ,
 	csvOutputFile.WriteString(headerString[:len(headerString)-1] + "\n")
 
-	for _, of := range TableObservationFact {
+	for ofk, of := range TableObservationFact {
+
 		copyObs := of
+
+		//observation blob for survival analysis
+		if IsSurvivalFact(ofk) {
+			//ok is a extra check
+			cipherBlob, ok := EventObservationBlobEncrypted[ofk]
+			if !ok {
+				return fmt.Errorf("Key for %s was not found. Was the encrpytion of the observation blob performed ?", fmt.Sprint(*ofk))
+			}
+			of.ObservationBlob = cipherBlob
+
+		}
 
 		// if dummy observation
 		if _, ok := TableDummyToPatient[of.PK.PatientNum]; ok {
