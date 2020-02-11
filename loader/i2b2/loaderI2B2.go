@@ -17,8 +17,6 @@ import (
 	"go.dedis.ch/onet/v3/log"
 )
 
-var numberOfObservations int64 = 0
-
 // Files is the object structure behind the files.toml
 type Files struct {
 	TableAccess       string
@@ -181,7 +179,6 @@ func LoadI2B2Data(el *onet.Roster, entryPointIdx int, directory string, files Fi
 	}
 
 	log.Lvl2("--- Finished converting LOCAL_ONTOLOGY ---")
-	log.Lvl2("--- Starting generation of MedcoOntology ---")
 
 	err = GenerateMedCoOntology()
 	if err != nil {
@@ -233,16 +230,17 @@ func LoadI2B2Data(el *onet.Roster, entryPointIdx int, directory string, files Fi
 		return err
 	}
 
-	EventObservationBlobEncrypted, err = EncryptEventBlob(EventObservationBlob, el, entryPointIdx)
+	EventObservationBlobEncrypted, err = EncryptEventBlob(EventObservationBlob, el)
 	if err != nil {
 		return err
 	}
+
+	EncryptZeroEvent = func() (string, error) { return EventBlobForDummyPatient(el) }
 
 	err = ConvertObservationFact()
 	if err != nil {
 		return err
 	}
-	log.Lvl2(fmt.Sprintf("%d observation facts were written", numberOfObservations))
 
 	log.Lvl2("--- Finished converting OBSERVATION_FACT ---")
 
@@ -1246,13 +1244,9 @@ func ConvertConceptDimension() error {
 			csvOutputFile.WriteString(cd.ToCSVText() + "\n")
 			// if the concept is sensitive -> fetch its encrypted tag and tag_id
 		} else if _, ok := MapConceptPathToTag[cd.PK.ConceptPath]; ok {
-			//log.Lvl2(fmt.Sprintf("%s is a sensitive path", cd.PK.ConceptPath))
 			temp := MapConceptPathToTag[cd.PK.ConceptPath].Tag
 			csvOutputFile.WriteString(ConceptDimensionSensitiveToCSVText(&temp, MapConceptPathToTag[cd.PK.ConceptPath].TagID) + "\n")
 			MapConceptCodeToTag[cd.ConceptCD] = MapConceptPathToTag[cd.PK.ConceptPath].TagID
-			if strings.Contains(cd.PK.ConceptPath, "Survival") {
-				log.Lvl2(fmt.Sprintf("%s is a sensitive path and its tagID is %d. Code is %s", cd.PK.ConceptPath, MapConceptPathToTag[cd.PK.ConceptPath].TagID, cd.ConceptCD))
-			}
 			// if the concept does not exist in the LocalOntology and none of his siblings is sensitive
 		} else if _, ok := HasSensitiveParents(cd.PK.ConceptPath); !ok {
 			csvOutputFile.WriteString(cd.ToCSVText() + "\n")
@@ -1377,9 +1371,10 @@ func ConvertObservationFact() error {
 	for ofk, of := range TableObservationFact {
 
 		copyObs := of
+		survFact := IsSurvivalFact(ofk)
 
 		//observation blob for survival analysis
-		if IsSurvivalFact(ofk) {
+		if survFact {
 			//ok is a extra check
 			cipherBlob, ok := EventObservationBlobEncrypted[ofk]
 			if !ok {
@@ -1394,6 +1389,7 @@ func ConvertObservationFact() error {
 			// 1. choose a random observation from the original patient
 			// 2. copy the data
 			// 3. change patient_num and encounter_num
+			// 4. if the observation is a survival analysis recpord, add the blob
 			listObs := MapDummyObs[of.PK.PatientNum]
 
 			// TODO: find out why this can be 0 (the generation should not allow this
@@ -1403,6 +1399,7 @@ func ConvertObservationFact() error {
 			index := rand.Intn(len(listObs))
 
 			copyObs = TableObservationFact[listObs[index]]
+
 			// change patient_num and encounter_num
 			tmp := MapNewEncounterNum[VisitDimensionPK{EncounterNum: copyObs.PK.EncounterNum, PatientNum: of.PK.PatientNum}]
 			copyObs.PK = regenerateObservationPK(copyObs.PK, tmp.PatientNum, tmp.EncounterNum)
@@ -1410,6 +1407,14 @@ func ConvertObservationFact() error {
 			copyObs.PK.ConceptCD = of.PK.ConceptCD
 			copyObs.AdminColumns.TextSearchIndex = of.AdminColumns.TextSearchIndex
 
+			//Encrypts a "0 0" event and writes it in the blob of the copyobs
+			if survFact {
+				copyObs.ObservationBlob, err = EncryptZeroEvent()
+
+				if err != nil {
+					return err
+				}
+			}
 			// delete observation from the list (so we don't choose it again)
 			listObs[index] = listObs[len(listObs)-1]
 			listObs = listObs[:len(listObs)-1]
@@ -1424,9 +1429,7 @@ func ConvertObservationFact() error {
 		// if the concept is sensitive we replace its code with the correspondent tag ID
 		if _, ok := MapConceptCodeToTag[copyObs.PK.ConceptCD]; ok {
 			copyObs.PK.ConceptCD = "TAG_ID:" + strconv.FormatInt(MapConceptCodeToTag[copyObs.PK.ConceptCD], 10)
-			if strings.Contains(copyObs.PK.ConceptCD, "SRVA") {
-				log.Lvl2(fmt.Sprintf("A concept identifies as a survival concept and was found in the sensitive concept code map %s", copyObs.PK.ConceptCD))
-			}
+
 		}
 		//this should not happen
 		if _, isSensi := MapConceptCodeToTag[copyObs.PK.ConceptCD]; strings.Contains(copyObs.PK.ConceptCD, "SRVA") && !isSensi {
@@ -1436,9 +1439,6 @@ func ConvertObservationFact() error {
 		// TODO: connected with the previous TODO
 		if copyObs.PK.EncounterNum != "" {
 			csvOutputFile.WriteString(copyObs.ToCSVText() + "\n")
-			numberOfObservations++
-		} else {
-			log.Lvl2(fmt.Sprintf("An observation has been ignored because the encounter number field was null\n concept %s encounternum %s patientnum %s", of.PK.ConceptCD, of.PK.EncounterNum, of.PK.PatientNum))
 		}
 	}
 

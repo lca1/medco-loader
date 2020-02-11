@@ -1,11 +1,12 @@
 package loaderi2b2
 
 import (
-	"github.com/ldsec/unlynx/lib"
-	"go.dedis.ch/kyber/v3"
-	"go.dedis.ch/onet/v3/log"
 	"strconv"
 	"strings"
+
+	libunlynx "github.com/ldsec/unlynx/lib"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/onet/v3/log"
 )
 
 // ####----HELPER STRUCTS----####
@@ -248,6 +249,9 @@ var EventObservationBlob map[*ObservationFactPK]string
 
 // EventObservationBlobEncrypted contains the vale of EventObservationBlob after probabilistic encryption
 var EventObservationBlobEncrypted map[*ObservationFactPK]string
+
+// EncryptZeroEvent is  used when a dummy patient carries a survival analysis concept
+var EncryptZeroEvent func() (string, error)
 
 // HeaderObservationFact contains all the headers for the observation_fact table
 var HeaderObservationFact []string
