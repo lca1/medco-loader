@@ -243,6 +243,12 @@ var MapDummyObs map[string][]*ObservationFactPK
 // TableObservationFact is observation_fact table
 var TableObservationFact map[*ObservationFactPK]ObservationFact
 
+// EventObservationBlob keys are a subset of those of TableObservationFact
+var EventObservationBlob map[*ObservationFactPK]string
+
+// EventObservationBlobEncrypted contains the vale of EventObservationBlob after probabilistic encryption
+var EventObservationBlobEncrypted map[*ObservationFactPK]string
+
 // HeaderObservationFact contains all the headers for the observation_fact table
 var HeaderObservationFact []string
 
