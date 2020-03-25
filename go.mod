@@ -5,6 +5,7 @@ require (
 	github.com/ldsec/medco-unlynx v0.3.0
 	github.com/ldsec/unlynx v1.4.0
 	github.com/lib/pq v1.3.0
+	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
 	github.com/urfave/cli v1.22.2
 	go.dedis.ch/kyber/v3 v3.0.12

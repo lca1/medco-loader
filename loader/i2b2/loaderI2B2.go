@@ -12,10 +12,26 @@ import (
 	"github.com/ldsec/medco-loader/loader"
 	servicesmedco "github.com/ldsec/medco-unlynx/services"
 	libunlynx "github.com/ldsec/unlynx/lib"
+	"github.com/sirupsen/logrus"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/onet/v3"
 	"go.dedis.ch/onet/v3/log"
 )
+
+const Profiling bool = false
+const ProfilingSeed int64 = 0
+
+func init() {
+
+	if Profiling {
+		logrus.SetLevel(logrus.TraceLevel)
+		fmt.Print("Trace level enabled")
+		rand.Seed(ProfilingSeed)
+		logrus.Info("Profiling mode enabled")
+	} else {
+		logrus.SetLevel(logrus.InfoLevel)
+	}
+}
 
 // Files is the object structure behind the files.toml
 type Files struct {
@@ -244,6 +260,7 @@ func LoadI2B2Data(el *onet.Roster, entryPointIdx int, directory string, files Fi
 
 	log.Lvl2("--- Finished converting OBSERVATION_FACT ---")
 
+	//log this somwhere !!!!!!!!!
 	err = GenerateLoadingDataScript(i2b2DB)
 	if err != nil {
 		log.Fatal("Error while generating the loading data .sh file", err)
@@ -296,6 +313,7 @@ func GenerateLoadingDataScript(i2b2DB loader.DBSettings) error {
 		}
 	}
 
+	loading += "TRUNCATE TABLE " + OutputFilePaths["TABLE_ACCESS"].TableName + ";\n"
 	loading += `\copy ` + OutputFilePaths["TABLE_ACCESS"].TableName + ` FROM '` + OutputFilePaths["TABLE_ACCESS"].Path + `' ESCAPE '"' DELIMITER ',' CSV HEADER;` + "\n"
 	loading += "TRUNCATE TABLE " + OutputFilePaths["SENSITIVE_TAGGED"].TableName + ";\n"
 	loading += `\copy ` + OutputFilePaths["SENSITIVE_TAGGED"].TableName + ` FROM '` + OutputFilePaths["SENSITIVE_TAGGED"].Path + `' ESCAPE '"' DELIMITER ',' CSV HEADER;` + "\n"
@@ -818,7 +836,12 @@ func ParseLocalTable(group *onet.Roster, entryPointIdx int, name string) error {
 		}
 
 		// re-randomize TAG_IDs
-		rand.Seed(time.Now().UnixNano())
+		if Profiling {
+			//rand.Seed(ProfilingSeed)
+		} else {
+			rand.Seed(time.Now().UnixNano())
+		}
+
 		perm := rand.Perm(len(MapConceptPathToTag))
 
 		// 'populate' map (Concept codes)
@@ -973,7 +996,9 @@ func ParsePatientDimension(pk kyber.Point) error {
 
 	//skip header
 	for _, line := range lines[1:] {
+
 		pdk, pd := PatientDimensionFromString(line, pk)
+		logrus.Tracef("parsing patient number %s, at line %d ", pdk.PatientNum, line)
 		TablePatientDimension[pdk] = pd
 	}
 
@@ -997,31 +1022,46 @@ func ConvertPatientDimension(pk kyber.Point, empty bool) error {
 
 	// re-randomize the patient_num
 	totalNbrPatients := len(TablePatientDimension) + len(TableDummyToPatient)
-	rand.Seed(time.Now().UnixNano())
+	if Profiling {
+		//rand.Seed(ProfilingSeed)
+		SortedTablePatientDimension = NewSortedTablePatientDimensionType(TablePatientDimension)
+		SortedTableDummyToPatient = NewSortedTableDummyToPatientType(TableDummyToPatient)
+	} else {
+		rand.Seed(time.Now().UnixNano())
+	}
+
 	perm := rand.Perm(totalNbrPatients)
 
 	// remove the last ,
 	csvOutputFile.WriteString(headerString[:len(headerString)-1] + "\n")
 
 	i := 0
-	for _, pd := range TablePatientDimension {
-		MapNewPatientNum[pd.PK.PatientNum] = strconv.FormatInt(int64(perm[i]), 10)
-		pd.PK.PatientNum = strconv.FormatInt(int64(perm[i]), 10)
-		csvOutputFile.WriteString(pd.ToCSVText(empty) + "\n")
-		i++
-	}
+	if Profiling {
+		internals := internalStates{pk: pk, csvOutputFile: csvOutputFile, i: &i, perm: perm}
+		SortedTablePatientDimension.ForEach(internals.LoaderI2B2CallBack)
+		SortedTableDummyToPatient.ForEach(internals.DummyConversionCallback)
+	} else {
+		for _, pd := range TablePatientDimension {
+			MapNewPatientNum[pd.PK.PatientNum] = strconv.FormatInt(int64(perm[i]), 10)
+			logrus.Tracef("patient number %s has permutation %d", pd.PK.PatientNum, perm[i])
+			pd.PK.PatientNum = strconv.FormatInt(int64(perm[i]), 10)
+			csvOutputFile.WriteString(pd.ToCSVText(empty) + "\n")
+			i++
+		}
 
-	// add dummies
-	for dummyNum, patientNum := range TableDummyToPatient {
-		MapNewPatientNum[dummyNum] = strconv.FormatInt(int64(perm[i]), 10)
+		// add dummies
+		for dummyNum, patientNum := range TableDummyToPatient {
+			logrus.Tracef("Patient dummy num %s permi %d", dummyNum, perm[i])
+			MapNewPatientNum[dummyNum] = strconv.FormatInt(int64(perm[i]), 10)
 
-		patient := TablePatientDimension[PatientDimensionPK{PatientNum: patientNum}]
-		patient.PK.PatientNum = strconv.FormatInt(int64(perm[i]), 10)
-		ef := libunlynx.EncryptInt(pk, 0)
-		patient.EncryptedFlag = *ef
+			patient := TablePatientDimension[PatientDimensionPK{PatientNum: patientNum}]
+			patient.PK.PatientNum = strconv.FormatInt(int64(perm[i]), 10)
+			ef := libunlynx.EncryptInt(pk, 0)
+			patient.EncryptedFlag = *ef
 
-		csvOutputFile.WriteString(patient.ToCSVText(empty) + "\n")
-		i++
+			csvOutputFile.WriteString(patient.ToCSVText(empty) + "\n")
+			i++
+		}
 	}
 
 	// write MapNewPatientNum to csv
@@ -1130,32 +1170,47 @@ func ConvertVisitDimension(empty bool) error {
 
 	// re-randomize the encounter_num
 	totalNbrVisits := len(TableVisitDimension) + len(TableDummyToPatient)*MaxVisits
-	rand.Seed(time.Now().UnixNano())
+	if Profiling {
+		//rand.Seed(ProfilingSeed)
+	} else {
+		rand.Seed(time.Now().UnixNano())
+	}
+
 	perm := rand.Perm(totalNbrVisits)
 
 	// remove the last ,
 	csvOutputFile.WriteString(headerString[:len(headerString)-1] + "\n")
 
 	i := 0
-	for _, vd := range TableVisitDimension {
-		MapNewEncounterNum[VisitDimensionPK{EncounterNum: vd.PK.EncounterNum, PatientNum: vd.PK.PatientNum}] = VisitDimensionPK{EncounterNum: strconv.FormatInt(int64(perm[i]), 10), PatientNum: MapNewPatientNum[vd.PK.PatientNum]}
-		vd.PK.EncounterNum = strconv.FormatInt(int64(perm[i]), 10)
-		vd.PK.PatientNum = MapNewPatientNum[vd.PK.PatientNum]
-		csvOutputFile.WriteString(vd.ToCSVText(empty) + "\n")
-		i++
-	}
+	if Profiling {
+		SortedTableVisitDimension = NewSortedTableVisitDimensionType(TableVisitDimension)
+		visitAndDummyInternals = &internalStates{i: &i, perm: perm, csvOutputFile: csvOutputFile}
+		SortedTableVisitDimension.ForEach(visitAndDummyInternals.VisitCallback)
+		//SortedTableDummyToPatient = NewSortedTableDummyToPatientType(TableDummyToPatient)
+		SortedTableDummyToPatient.ForEach(visitAndDummyInternals.DummyVisitCallback)
 
-	// add dummies
-	for dummyNum, patientNum := range TableDummyToPatient {
-		listPatientVisits := MapPatientVisits[patientNum]
-
-		for _, el := range listPatientVisits {
-			MapNewEncounterNum[VisitDimensionPK{EncounterNum: el, PatientNum: dummyNum}] = VisitDimensionPK{EncounterNum: strconv.FormatInt(int64(perm[i]), 10), PatientNum: MapNewPatientNum[dummyNum]}
-			visit := TableVisitDimension[VisitDimensionPK{EncounterNum: el, PatientNum: patientNum}]
-			visit.PK.EncounterNum = strconv.FormatInt(int64(perm[i]), 10)
-			visit.PK.PatientNum = MapNewPatientNum[dummyNum]
-			csvOutputFile.WriteString(visit.ToCSVText(empty) + "\n")
+	} else {
+		for _, vd := range TableVisitDimension {
+			MapNewEncounterNum[VisitDimensionPK{EncounterNum: vd.PK.EncounterNum, PatientNum: vd.PK.PatientNum}] = VisitDimensionPK{EncounterNum: strconv.FormatInt(int64(perm[i]), 10), PatientNum: MapNewPatientNum[vd.PK.PatientNum]}
+			vd.PK.EncounterNum = strconv.FormatInt(int64(perm[i]), 10)
+			vd.PK.PatientNum = MapNewPatientNum[vd.PK.PatientNum]
+			csvOutputFile.WriteString(vd.ToCSVText(empty) + "\n")
 			i++
+		}
+
+		// add dummies
+		for dummyNum, patientNum := range TableDummyToPatient {
+			listPatientVisits := MapPatientVisits[patientNum]
+
+			for _, el := range listPatientVisits {
+				MapNewEncounterNum[VisitDimensionPK{EncounterNum: el, PatientNum: dummyNum}] = VisitDimensionPK{EncounterNum: strconv.FormatInt(int64(perm[i]), 10), PatientNum: MapNewPatientNum[dummyNum]}
+				visit := TableVisitDimension[VisitDimensionPK{EncounterNum: el, PatientNum: patientNum}]
+				visit.PK.EncounterNum = strconv.FormatInt(int64(perm[i]), 10)
+				visit.PK.PatientNum = MapNewPatientNum[dummyNum]
+				csvOutputFile.WriteString(visit.ToCSVText(empty) + "\n")
+				i++
+			}
+
 		}
 	}
 
@@ -1352,12 +1407,19 @@ func ParseObservationFact() error {
 
 // ConvertObservationFact converts the old observation.csv file
 func ConvertObservationFact() error {
-	rand.Seed(time.Now().UnixNano())
-
+	if Profiling {
+		//rand.Seed(ProfilingSeed)
+	} else {
+		rand.Seed(time.Now().UnixNano())
+	}
 	csvOutputFile, err := os.Create(OutputFilePaths["OBSERVATION_FACT"].Path)
 	if err != nil {
 		log.Fatal("Error opening [observation_fact].csv")
 		return err
+	}
+	if Profiling {
+		SortedTableObservationFact = NewSortedTableObservationFactType(TableObservationFact)
+		factInternals = &internalStates{csvOutputFile: csvOutputFile}
 	}
 	defer csvOutputFile.Close()
 
@@ -1367,78 +1429,86 @@ func ConvertObservationFact() error {
 	}
 	// remove the last ,
 	csvOutputFile.WriteString(headerString[:len(headerString)-1] + "\n")
-
-	for ofk, of := range TableObservationFact {
-
-		copyObs := of
-		survFact := IsSurvivalFact(ofk)
-
-		//observation blob for survival analysis
-		if survFact {
-			//ok is a extra check
-			cipherBlob, ok := EventObservationBlobEncrypted[ofk]
-			if !ok {
-				return fmt.Errorf("Key for %s was not found. Was the encrpytion of the observation blob performed ?", fmt.Sprint(*ofk))
-			}
-			copyObs.ObservationBlob = cipherBlob
-
+	if Profiling {
+		err = SortedTableObservationFact.ForEach(factInternals.FactCallback)
+		if err != nil {
+			log.Fatal("error in profiling")
+			return err
 		}
+	} else {
+		for ofk, of := range TableObservationFact {
 
-		// if dummy observation
-		if _, ok := TableDummyToPatient[of.PK.PatientNum]; ok {
-			// 1. choose a random observation from the original patient
-			// 2. copy the data
-			// 3. change patient_num and encounter_num
-			// 4. if the observation is a survival analysis recpord, add the blob
-			listObs := MapDummyObs[of.PK.PatientNum]
+			copyObs := of
+			survFact := IsSurvivalFact(ofk)
 
-			// TODO: find out why this can be 0 (the generation should not allow this
-			if len(listObs) == 0 {
-				continue
-			}
-			index := rand.Intn(len(listObs))
-
-			copyObs = TableObservationFact[listObs[index]]
-
-			// change patient_num and encounter_num
-			tmp := MapNewEncounterNum[VisitDimensionPK{EncounterNum: copyObs.PK.EncounterNum, PatientNum: of.PK.PatientNum}]
-			copyObs.PK = regenerateObservationPK(copyObs.PK, tmp.PatientNum, tmp.EncounterNum)
-			// keep the same concept (and text_search_index) that was already there
-			copyObs.PK.ConceptCD = of.PK.ConceptCD
-			copyObs.AdminColumns.TextSearchIndex = of.AdminColumns.TextSearchIndex
-
-			//Encrypts a "0 0" event and writes it in the blob of the copyobs
+			//observation blob for survival analysis
 			if survFact {
-				copyObs.ObservationBlob, err = EncryptZeroEvent()
-
-				if err != nil {
-					return err
+				//ok is a extra check
+				cipherBlob, ok := EventObservationBlobEncrypted[ofk]
+				if !ok {
+					return fmt.Errorf("Key for %s was not found. Was the encrpytion of the observation blob performed ?", fmt.Sprint(*ofk))
 				}
+				copyObs.ObservationBlob = cipherBlob
+
 			}
-			// delete observation from the list (so we don't choose it again)
-			listObs[index] = listObs[len(listObs)-1]
-			listObs = listObs[:len(listObs)-1]
-			MapDummyObs[of.PK.PatientNum] = listObs
 
-		} else { // if real observation
-			// change patient_num and encounter_num
-			tmp := MapNewEncounterNum[VisitDimensionPK{EncounterNum: of.PK.EncounterNum, PatientNum: of.PK.PatientNum}]
-			copyObs.PK = regenerateObservationPK(copyObs.PK, tmp.PatientNum, tmp.EncounterNum)
-		}
+			// if dummy observation
+			if _, ok := TableDummyToPatient[of.PK.PatientNum]; ok {
+				// 1. choose a random observation from the original patient
+				// 2. copy the data
+				// 3. change patient_num and encounter_num
+				// 4. if the observation is a survival analysis recpord, add the blob
+				listObs := MapDummyObs[of.PK.PatientNum]
 
-		// if the concept is sensitive we replace its code with the correspondent tag ID
-		if _, ok := MapConceptCodeToTag[copyObs.PK.ConceptCD]; ok {
-			copyObs.PK.ConceptCD = "TAG_ID:" + strconv.FormatInt(MapConceptCodeToTag[copyObs.PK.ConceptCD], 10)
+				// TODO: find out why this can be 0 (the generation should not allow this
+				if len(listObs) == 0 {
+					continue
+				}
 
-		}
-		//this should not happen
-		if _, isSensi := MapConceptCodeToTag[copyObs.PK.ConceptCD]; strings.Contains(copyObs.PK.ConceptCD, "SRVA") && !isSensi {
-			log.Fatalf("A concept identifies as a survival concept, but is not in the MapConceptCodeToTag %s", copyObs.PK.ConceptCD)
-		}
+				index := rand.Intn(len(listObs))
+				logrus.Tracef("Dummy patient %s for index %d, has obs %v ", of.PK.PatientNum, index, *listObs[index])
+				copyObs = TableObservationFact[listObs[index]]
 
-		// TODO: connected with the previous TODO
-		if copyObs.PK.EncounterNum != "" {
-			csvOutputFile.WriteString(copyObs.ToCSVText() + "\n")
+				// change patient_num and encounter_num
+				tmp := MapNewEncounterNum[VisitDimensionPK{EncounterNum: copyObs.PK.EncounterNum, PatientNum: of.PK.PatientNum}]
+				copyObs.PK = regenerateObservationPK(copyObs.PK, tmp.PatientNum, tmp.EncounterNum)
+				// keep the same concept (and text_search_index) that was already there
+				copyObs.PK.ConceptCD = of.PK.ConceptCD
+				copyObs.AdminColumns.TextSearchIndex = of.AdminColumns.TextSearchIndex
+
+				//Encrypts a "0 0" event and writes it in the blob of the copyobs
+				if survFact {
+					copyObs.ObservationBlob, err = EncryptZeroEvent()
+
+					if err != nil {
+						return err
+					}
+				}
+				// delete observation from the list (so we don't choose it again)
+				listObs[index] = listObs[len(listObs)-1]
+				listObs = listObs[:len(listObs)-1]
+				MapDummyObs[of.PK.PatientNum] = listObs
+
+			} else { // if real observation
+				// change patient_num and encounter_num
+				tmp := MapNewEncounterNum[VisitDimensionPK{EncounterNum: of.PK.EncounterNum, PatientNum: of.PK.PatientNum}]
+				copyObs.PK = regenerateObservationPK(copyObs.PK, tmp.PatientNum, tmp.EncounterNum)
+			}
+
+			// if the concept is sensitive we replace its code with the correspondent tag ID
+			if _, ok := MapConceptCodeToTag[copyObs.PK.ConceptCD]; ok {
+				copyObs.PK.ConceptCD = "TAG_ID:" + strconv.FormatInt(MapConceptCodeToTag[copyObs.PK.ConceptCD], 10)
+
+			}
+			//this should not happen
+			if _, isSensi := MapConceptCodeToTag[copyObs.PK.ConceptCD]; strings.Contains(copyObs.PK.ConceptCD, "SRVA") && !isSensi {
+				log.Fatalf("A concept identifies as a survival concept, but is not in the MapConceptCodeToTag %s", copyObs.PK.ConceptCD)
+			}
+
+			// TODO: connected with the previous TODO
+			if copyObs.PK.EncounterNum != "" {
+				csvOutputFile.WriteString(copyObs.ToCSVText() + "\n")
+			}
 		}
 	}
 
