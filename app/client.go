@@ -50,8 +50,13 @@ func loadV0(c *cli.Context) error {
 	gaDbUser := c.String("gaDbUser")
 	gaDbPassword := c.String("gaDbPassword")
 
+	// genomic annotations loading settings
+	gaTestData := c.Bool("gaTestData")
+	gaTruncate := c.Bool("gaTruncate")
+
 	i2b2DB := loader.DBSettings{DBhost: i2b2DbHost, DBport: i2b2DbPort, DBname: i2b2DbName, DBuser: i2b2DbUser, DBpassword: i2b2DbPassword}
 	gaDB := loader.DBSettings{DBhost: gaDbHost, DBport: gaDbPort, DBname: gaDbName, DBuser: gaDbUser, DBpassword: gaDbPassword}
+	gaLoadingSettings := loader.LoadingSettings{IsTestData: gaTestData, Truncate: gaTruncate}
 
 	// check if db connection works
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", i2b2DbHost, i2b2DbPort, i2b2DbUser, i2b2DbPassword, i2b2DbName)
@@ -146,7 +151,7 @@ func loadV0(c *cli.Context) error {
 		}
 	}
 
-	err = loadergenomic.LoadGenomicData(el.Roster, entryPointIdx, fOntClinical, fOntGenomic, fClinical, fGenomic, outputPath, allSensitive, mapSensitive, i2b2DB, gaDB, false)
+	err = loadergenomic.LoadGenomicData(el.Roster, entryPointIdx, fOntClinical, fOntGenomic, fClinical, fGenomic, outputPath, allSensitive, mapSensitive, i2b2DB, gaDB, gaLoadingSettings, false)
 	if err != nil {
 		log.Fatal("Error while loading client data:", err)
 	}

@@ -220,7 +220,8 @@ func ReplayDataset(filename string, x int) error {
 }
 
 // LoadGenomicData initiates the loading process
-func LoadGenomicData(el *onet.Roster, entryPointIdx int, fOntClinical, fOntGenomic, fClinical, fGenomic *os.File, outputPath string, allSensitive bool, mapSensitive map[string]struct{}, i2b2DB loader.DBSettings, gaDB loader.DBSettings, testing bool) error {
+func LoadGenomicData(el *onet.Roster, entryPointIdx int, fOntClinical, fOntGenomic, fClinical, fGenomic *os.File, outputPath string, allSensitive bool, mapSensitive map[string]struct{},
+	i2b2DB loader.DBSettings, gaDB loader.DBSettings, gaLoadingSettings loader.LoadingSettings, testing bool) error {
 	start := time.Now()
 
 	// init global variables
@@ -251,7 +252,7 @@ func LoadGenomicData(el *onet.Roster, entryPointIdx int, fOntClinical, fOntGenom
 		FileHandlers = append(FileHandlers, fp)
 	}
 
-	err := GenerateOntologyFiles(el, entryPointIdx, fOntClinical, fOntGenomic, mapSensitive)
+	err := GenerateOntologyFiles(el, entryPointIdx, fOntClinical, fOntGenomic, mapSensitive, gaLoadingSettings.IsTestData)
 	if err != nil {
 		log.Fatal("Error while generating the ontology .csv files", err)
 		return err
@@ -270,7 +271,7 @@ func LoadGenomicData(el *onet.Roster, entryPointIdx int, fOntClinical, fOntGenom
 
 	startLoadingOntology := time.Now()
 
-	err = GenerateLoadingOntologyScript(i2b2DB, gaDB)
+	err = GenerateLoadingOntologyScript(i2b2DB, gaDB, gaLoadingSettings)
 	if err != nil {
 		log.Fatal("Error while generating the loading ontology .sh file", err)
 		return err
@@ -320,7 +321,7 @@ func LoadGenomicData(el *onet.Roster, entryPointIdx int, fOntClinical, fOntGenom
 }
 
 // GenerateLoadingOntologyScript creates a load ontology .sql script
-func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSettings) error {
+func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSettings, gaLoadingSettings loader.LoadingSettings) error {
 	fp, err := os.Create(FileBashPath[0])
 	if err != nil {
 		return err
@@ -503,12 +504,14 @@ func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSetti
 	loading += `CREATE TABLE IF NOT EXISTS genomic_annotations.genomic_annotations(
 				variant_id character varying(255) NOT NULL,
 				variant_id_enc character varying(255) NOT NULL,
+				test_data bool NOT NULL,
 				variant_name character varying(255) NOT NULL,
 				protein_change character varying(255) NOT NULL,
 				hugo_gene_symbol character varying(255) NOT NULL,
-				annotations text NOT NULL);
-		
-				CREATE TABLE IF NOT EXISTS genomic_annotations.annotation_names(
+				annotations text NOT NULL,
+				CONSTRAINT genomic_annotations_pk PRIMARY KEY (variant_id, test_data));` + "\n"
+
+	loading += `CREATE TABLE IF NOT EXISTS genomic_annotations.annotation_names(
 				annotation_name character varying(255) NOT NULL PRIMARY KEY);
 		
 				CREATE TABLE IF NOT EXISTS genomic_annotations.gene_values(
@@ -521,32 +524,33 @@ func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSetti
 				GRANT ALL on schema genomic_annotations to $GA_DB_USER;
 				GRANT ALL privileges on all tables in schema genomic_annotations to $GA_DB_USER;` + "\n"
 
-	//TODO: Delete this please
-	loading += "TRUNCATE " + TablenamesOntology[2] + ";\n"
+	if gaLoadingSettings.Truncate {
+		loading += "TRUNCATE " + TablenamesOntology[2] + ";\n"
+	}
 	loading += `\copy ` + TablenamesOntology[2] + ` FROM '` + FilePathsOntology[2] + `' ESCAPE '"' DELIMITER ',' CSV;` + "\n"
 
 	// create annotations table
 	loading += `DROP TABLE IF EXISTS genomic_annotations.hugo_gene_symbol;` + "\n"
-	loading += `CREATE TABLE genomic_annotations.hugo_gene_symbol as select distinct hugo_gene_symbol as annotation_value from genomic_annotations.genomic_annotations;` + "\n"
+	loading += `CREATE TABLE genomic_annotations.hugo_gene_symbol as select distinct hugo_gene_symbol as annotation_value, test_data from genomic_annotations.genomic_annotations;` + "\n"
 
 	loading += `DROP TABLE IF EXISTS genomic_annotations.protein_change;` + "\n"
-	loading += `CREATE TABLE genomic_annotations.protein_change as select distinct protein_change as annotation_value from genomic_annotations.genomic_annotations;` + "\n"
+	loading += `CREATE TABLE genomic_annotations.protein_change as select distinct protein_change as annotation_value, test_data from genomic_annotations.genomic_annotations;` + "\n"
 
 	loading += `DROP TABLE IF EXISTS genomic_annotations.variant_name;` + "\n"
-	loading += `CREATE TABLE genomic_annotations.variant_name as select distinct variant_name as annotation_value from genomic_annotations.genomic_annotations;` + "\n"
+	loading += `CREATE TABLE genomic_annotations.variant_name as select distinct variant_name as annotation_value, test_data from genomic_annotations.genomic_annotations;` + "\n"
 
-	loading += `CREATE OR REPLACE FUNCTION genomic_annotations.ga_getvalues(annotation varchar, val varchar, lim int) RETURNS SETOF varchar AS \$\$
+	loading += `CREATE OR REPLACE FUNCTION genomic_annotations.ga_getvalues(annotation varchar, val varchar, lim int, is_test_data bool) RETURNS SETOF varchar AS \$\$
 				BEGIN
     				RETURN QUERY EXECUTE
 					format('SELECT annotation_value
 					FROM genomic_annotations.%I
-					WHERE annotation_value ~* \$1
-           			ORDER BY annotation_value LIMIT \$2',annotation)
-    				USING val, lim;
+					WHERE annotation_value ~* \$1 AND test_data = \$2
+           			ORDER BY annotation_value LIMIT \$3',annotation)
+    				USING val, is_test_data, lim;
 				END;
 				\$\$ LANGUAGE plpgsql;` + "\n"
 
-	loading += `CREATE OR REPLACE FUNCTION genomic_annotations.ga_getvariants(annotation varchar, val varchar, zygosity varchar, enc bool) RETURNS SETOF varchar AS \$\$
+	loading += `CREATE OR REPLACE FUNCTION genomic_annotations.ga_getvariants(annotation varchar, val varchar, zygosity varchar, enc bool, is_test_data bool) RETURNS SETOF varchar AS \$\$
 				DECLARE
 				col varchar;
 				BEGIN
@@ -559,10 +563,9 @@ func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSetti
     				RETURN QUERY EXECUTE
 					format('SELECT %I
 					FROM genomic_annotations.genomic_annotations
-					WHERE lower(%I) = lower(\$1)
-					AND annotations ~* \$2
+					WHERE lower(%I) = lower(\$1) AND annotations ~* \$2 AND test_data = \$3
            			ORDER BY variant_id',col,annotation)
-    				USING val, zygosity;
+    				USING val, zygosity, is_test_data;
 				END;
 				\$\$ LANGUAGE plpgsql;` + "\n"
 
@@ -652,7 +655,7 @@ func LoadDataFiles() error {
 }
 
 // GenerateOntologyFiles generates the .csv files that 'belong' to the whole ontology (metadata & medco)
-func GenerateOntologyFiles(group *onet.Roster, entryPointIdx int, fOntClinical, fOntGenomic *os.File, mapSensitive map[string]struct{}) error {
+func GenerateOntologyFiles(group *onet.Roster, entryPointIdx int, fOntClinical, fOntGenomic *os.File, mapSensitive map[string]struct{}, isTestData bool) error {
 	parsingTime := time.Duration(0)
 	startParsing := time.Now()
 
@@ -831,7 +834,7 @@ func GenerateOntologyFiles(group *onet.Roster, entryPointIdx int, fOntClinical, 
 
 	// encrypt sensitive ids
 	listEncryptedElements := EncryptElements(listSensitiveIDs, group)
-	if err := writeMedCoOntologyGenomicAnnotations(listSensitiveIDs, listEncryptedElements, annotations); err != nil {
+	if err := writeMedCoOntologyGenomicAnnotations(listSensitiveIDs, listEncryptedElements, annotations, isTestData); err != nil {
 		return err
 	}
 
@@ -1269,7 +1272,7 @@ func generateMedCoOntologyGenomicAnnotation(fields []string, record []string) st
 	return annotation
 }
 
-func writeMedCoOntologyGenomicAnnotations(listSensitiveIDs []int64, listEncryptedElements *libunlynx.CipherVector, annotations []string) error {
+func writeMedCoOntologyGenomicAnnotations(listSensitiveIDs []int64, listEncryptedElements *libunlynx.CipherVector, annotations []string, isTestData bool) error {
 	for i, annotation := range annotations {
 		if annotation != "NA" && annotation != "" {
 			ciphertextStr, err := (*listEncryptedElements)[i].Serialize()
@@ -1278,7 +1281,7 @@ func writeMedCoOntologyGenomicAnnotations(listSensitiveIDs []int64, listEncrypte
 				return err
 			}
 
-			_, err = FileHandlers[2].WriteString(`"` + strconv.FormatInt(listSensitiveIDs[i], 10) + `","` + ciphertextStr + `",` + annotation)
+			_, err = FileHandlers[2].WriteString(`"` + strconv.FormatInt(listSensitiveIDs[i], 10) + `","` + ciphertextStr + `","` + strconv.FormatBool(isTestData) + `",` + annotation)
 			if err != nil {
 				log.Fatal("Error in the writeMedCoOntologyGenomicAnnotations():", err)
 				return err

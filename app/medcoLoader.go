@@ -54,6 +54,13 @@ const (
 	optionGaDBpassword      = "gaDbPassword"
 	optionGaDBpasswordShort = "gaPw"
 
+	// genomic annotations loading settings
+	optionGaTestData      = "gaTestData"
+	optionGaTestDataShort = "gaTD"
+
+	optionGaTruncate      = "gaTruncate"
+	optionGaTruncateShort = "gaT"
+
 	// DefaultOntologyClinical is the name of the default clinical file (dataset)
 	DefaultOntologyClinical = "../../data/genomic/tcga_cbio/clinical_data.csv"
 	// DefaultOntologyGenomic is the name of the default clinical file (dataset)
@@ -207,6 +214,14 @@ func main() {
 			Name:   optionGaDBpassword + ", " + optionGaDBpasswordShort,
 			Usage:  "Genomic annotations database password",
 			EnvVar: "GA_DB_PASSWORD",
+		},
+		cli.BoolFlag{
+			Name:  optionGaTestData + ", " + optionGaTestDataShort,
+			Usage: "Set when uploading test genomic annotations data",
+		},
+		cli.BoolFlag{
+			Name:  optionGaTruncate + ", " + optionGaTruncateShort,
+			Usage: "Set when truncating existing genomic annotation tables",
 		},
 	}
 	loaderFlagsv0 = append(loaderFlagsCommon, loaderFlagsv0...)

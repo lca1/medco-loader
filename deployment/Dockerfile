@@ -24,7 +24,14 @@ RUN CGO_ENABLED=0 go build -v ./... && \
 FROM golang:1.13-alpine as release
 
 COPY --from=build /go/bin/medco-loader /go/bin/
-RUN apk add --no-cache postgresql-client
+
+RUN apk update && apk add --no-cache bash postgresql-client && mkdir /test_data
+
+COPY deployment/docker-entrypoint.sh /usr/local/bin/
+COPY data/genomic_v0_dataset.sh /test_data/
+
+RUN chmod a+x /usr/local/bin/docker-entrypoint.sh /test_data/genomic_v0_dataset.sh && \
+    /test_data/genomic_v0_dataset.sh
 
 # run-time environment
 ENV LOG_LEVEL=5 \

@@ -123,8 +123,9 @@ func generateFiles(t *testing.T, el *onet.Roster, entryPointIdx int) {
 	mapSensitive["CLIN_M_STAGE"] = struct{}{}*/
 
 	loadergenomic.AllSensitive = true
+	isTestData := false
 
-	err = loadergenomic.GenerateOntologyFiles(el, entryPointIdx, fOntologyClinical, fOntologyGenomic, mapSensitive)
+	err = loadergenomic.GenerateOntologyFiles(el, entryPointIdx, fOntologyClinical, fOntologyGenomic, mapSensitive, isTestData)
 	assert.True(t, err == nil, err)
 
 	err = loadergenomic.GenerateDataFiles(el, fClinical, fGenomic)
@@ -189,7 +190,8 @@ func TestReplayDataset(t *testing.T) {
 
 func TestGenerateLoadingScript(t *testing.T) {
 	dbSettings := loader.DBSettings{DBhost: "localhost", DBport: 5434, DBname: "medcodeployment", DBuser: "postgres", DBpassword: "prigen2017"}
-	err := loadergenomic.GenerateLoadingOntologyScript(dbSettings, dbSettings)
+	loadingSettings := loader.LoadingSettings{IsTestData: false, Truncate: true}
+	err := loadergenomic.GenerateLoadingOntologyScript(dbSettings, dbSettings, loadingSettings)
 	assert.True(t, err == nil)
 	err = loadergenomic.GenerateLoadingDataScript(dbSettings)
 	assert.True(t, err == nil)

@@ -17,6 +17,12 @@ type DBSettings struct {
 	DBname     string
 }
 
+// LoadingSettings stores the loading settings
+type LoadingSettings struct {
+	IsTestData bool
+	Truncate   bool
+}
+
 // ExecuteScript executes a .sh script with a specific path
 func ExecuteScript(path string) error {
 	// Display just the stderr if an error occurs

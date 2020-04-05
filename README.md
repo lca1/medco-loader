@@ -13,10 +13,10 @@ cd medco-loader/deployment/
 docker-compose build
 ``` 
 
-Before using the *medco-loader* you need to have MedCo up and running on your machine. To achieve that you can follow, for example, the [Local Development Deployment guide](https://ldsec.gitbook.io/medco-documentation/system-administrator-guide/deployment/local-development-deployment). 
+Before using the *medco-loader* you need to have MedCo up and running on your machine. To achieve that you can follow, for example, the [Local Development Deployment guide](https://ldsec.gitbook.io/medco-documentation/developers/local-development-deployment). 
 
 ## How to use it
-A detailed up-to-date guide on how to use the *medco-loader* is available [here](https://ldsec.gitbook.io/medco-documentation/system-administrator-guide/loading-data).
+A detailed up-to-date guide on how to use the *medco-loader* is available [here](https://ldsec.gitbook.io/medco-documentation/system-administrators/data-loading).
 
 ## Source code organization
 - *app*: *medco-loader* command line interface
