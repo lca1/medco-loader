@@ -1,7 +1,6 @@
 package loaderi2b2
 
 import (
-	"fmt"
 	"math/rand"
 	"os"
 	"sort"
@@ -165,18 +164,6 @@ func (internals *internalStates) FactCallback(entry factEntryType) (err error) {
 	of := entry.value
 	ofk := entry.key
 	copyObs := of
-	survFact := IsSurvivalFact(ofk)
-
-	//observation blob for survival analysis
-	if survFact {
-		//ok is a extra check
-		cipherBlob, ok := EventObservationBlobEncrypted[ofk]
-		if !ok {
-			return fmt.Errorf("Key for %s was not found. Was the encrpytion of the observation blob performed ?", fmt.Sprint(*ofk))
-		}
-		copyObs.ObservationBlob = cipherBlob
-
-	}
 
 	// if dummy observation
 	if _, ok := TableDummyToPatient[of.PK.PatientNum]; ok {
@@ -204,14 +191,6 @@ func (internals *internalStates) FactCallback(entry factEntryType) (err error) {
 		copyObs.PK.ConceptCD = of.PK.ConceptCD
 		copyObs.AdminColumns.TextSearchIndex = of.AdminColumns.TextSearchIndex
 		logrus.Tracef("Dummy tmp has value %v", tmp)
-		//Encrypts a "0 0" event and writes it in the blob of the copyobs
-		if survFact {
-			copyObs.ObservationBlob, err = EncryptZeroEvent()
-
-			if err != nil {
-				return err
-			}
-		}
 		// delete observation from the list (so we don't choose it again)
 		listObs[index] = listObs[len(listObs)-1]
 		listObs = listObs[:len(listObs)-1]

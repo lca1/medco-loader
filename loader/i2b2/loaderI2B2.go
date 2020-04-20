@@ -35,15 +35,18 @@ func init() {
 
 // Files is the object structure behind the files.toml
 type Files struct {
-	TableAccess       string
-	Ontology          []string
-	DummyToPatient    string
-	PatientDimension  string
-	VisitDimension    string
-	ConceptDimension  string
-	ModifierDimension string
-	ObservationFact   string
-	OutputFolder      string
+	TableAccess           string
+	Ontology              []string
+	DummyToPatient        string
+	PatientDimension      string
+	VisitDimension        string
+	ConceptDimension      string
+	ModifierDimension     string
+	ObservationFact       string
+	SurvivalFact          string
+	TimeDimension         string
+	SurvivalTypeDimension string
+	OutputFolder          string
 }
 
 // FileInfo contains the tablename where the .csv should be loaded and the output path
@@ -58,6 +61,8 @@ const I2B2METADATA = "i2b2metadata_i2b2."
 // I2B2DEMODATA path to i2b2demodata schema
 const I2B2DEMODATA = "i2b2demodata_i2b2."
 
+const SURVIVALDEMODATA = "survivaldemodata_i2b2."
+
 // ONT path to medco_ont schema
 const ONT = "medco_ont."
 
@@ -68,13 +73,15 @@ var (
 		"ONTOLOGY_CUSTOM_META",
 		"ONTOLOGY_ICD10_ICD9",
 		"ONTOLOGY_I2B2",
+		"ONTOLOGY_SURVIVAL",
 	}
 
 	InputFilePaths = map[string]string{
-		"ONTOLOGY_BIRN":        "../../data/i2b2/original/birn.csv",
-		"ONTOLOGY_CUSTOM_META": "../../data/i2b2/original/custom_meta.csv",
-		"ONTOLOGY_ICD10_ICD9":  "../../data/i2b2/original/icd10_icd9.csv",
-		"ONTOLOGY_I2B2":        "../../data/i2b2/original/i2b2.csv",
+		"ONTOLOGY_BIRN":              "../../data/i2b2/original/birn.csv",
+		"ONTOLOGY_CUSTOM_META":       "../../data/i2b2/original/custom_meta.csv",
+		"ONTOLOGY_ICD10_ICD9":        "../../data/i2b2/original/icd10_icd9.csv",
+		"ONTOLOGY_I2B2":              "../../data/i2b2/original/i2b2.csv",
+		"ONTOLOGY_SURVIVAL_ONTOLOGY": "../../data/i2b2/original/survival_ontology.csv",
 
 		"TABLE_ACCESS":      "../../data/i2b2/original/table_access.csv",
 		"DUMMY_TO_PATIENT":  "../../data/i2b2/original/dummy_to_patient.csv",
@@ -82,21 +89,27 @@ var (
 		"VISIT_DIMENSION":   "../../data/i2b2/original/visit_dimension.csv",
 		"CONCEPT_DIMENSION": "../../data/i2b2/original/concept_dimension.csv",
 		"OBSERVATION_FACT":  "../../data/i2b2/original/observation_fact.csv",
+
+		"SURVIVAL_FACT":  "../../data/i2b2/survival/observation_fact.csv",
+		"TIME_DIMENSION": "../../data/i2b2/survival/time_dimension.csv",
+		"TYPE_DIMENSION": "../../data/i2b2/survival/type_dimension.csv",
 	}
 
 	OutputFilePaths = map[string]FileInfo{
 		"TABLE_ACCESS":     {TableName: ONT + "table_access", Path: "../../data/i2b2/converted/table_access.csv"},
 		"SENSITIVE_TAGGED": {TableName: ONT + "sensitive_tagged", Path: "../../data/i2b2/converted/sensitive_tagged.csv"},
 
-		"LOCAL_BIRN":        {TableName: I2B2METADATA + "birn", Path: "../../data/i2b2/converted/local_birn.csv"},
-		"LOCAL_CUSTOM_META": {TableName: I2B2METADATA + "custom_meta", Path: "../../data/i2b2/converted/local_custom_meta.csv"},
-		"LOCAL_ICD10_ICD9":  {TableName: I2B2METADATA + "icd10_icd9", Path: "../../data/i2b2/converted/local_icd10_icd9.csv"},
-		"LOCAL_I2B2":        {TableName: I2B2METADATA + "i2b2", Path: "../../data/i2b2/converted/local_i2b2.csv"},
+		"LOCAL_BIRN":              {TableName: I2B2METADATA + "birn", Path: "../../data/i2b2/converted/local_birn.csv"},
+		"LOCAL_CUSTOM_META":       {TableName: I2B2METADATA + "custom_meta", Path: "../../data/i2b2/converted/local_custom_meta.csv"},
+		"LOCAL_ICD10_ICD9":        {TableName: I2B2METADATA + "icd10_icd9", Path: "../../data/i2b2/converted/local_icd10_icd9.csv"},
+		"LOCAL_I2B2":              {TableName: I2B2METADATA + "i2b2", Path: "../../data/i2b2/converted/local_i2b2.csv"},
+		"LOCAL_SURVIVAL_ONTOLOGY": {TableName: SURVIVALDEMODATA + "survival_ontology", Path: "../../data/i2b2/converted/local_survival_ontology.csv"},
 
-		"MEDCO_BIRN":        {TableName: ONT + "birn", Path: "../../data/i2b2/converted/medco_birn.csv"},
-		"MEDCO_CUSTOM_META": {TableName: ONT + "custom_meta", Path: "../../data/i2b2/converted/medco_custom_meta.csv"},
-		"MEDCO_ICD10_ICD9":  {TableName: ONT + "icd10_icd9", Path: "../../data/i2b2/converted/medco_icd10_icd9.csv"},
-		"MEDCO_I2B2":        {TableName: ONT + "i2b2", Path: "../../data/i2b2/converted/medco_i2b2.csv"},
+		"MEDCO_BIRN":              {TableName: ONT + "birn", Path: "../../data/i2b2/converted/medco_birn.csv"},
+		"MEDCO_CUSTOM_META":       {TableName: ONT + "custom_meta", Path: "../../data/i2b2/converted/medco_custom_meta.csv"},
+		"MEDCO_ICD10_ICD9":        {TableName: ONT + "icd10_icd9", Path: "../../data/i2b2/converted/medco_icd10_icd9.csv"},
+		"MEDCO_I2B2":              {TableName: ONT + "i2b2", Path: "../../data/i2b2/converted/medco_i2b2.csv"},
+		"MEDCO_SURVIVAL_ONTOLOGY": {TableName: SURVIVALDEMODATA + "survival_ontology", Path: "../../data/i2b2/converted/medco_survival_ontology.csv"},
 
 		"PATIENT_DIMENSION": {TableName: I2B2DEMODATA + "patient_dimension", Path: "../../data/i2b2/converted/patient_dimension.csv"},
 		"NEW_PATIENT_NUM":   {TableName: "", Path: "../../data/i2b2/converted/new_patient_num.csv"},
@@ -104,6 +117,10 @@ var (
 		"NEW_ENCOUNTER_NUM": {TableName: "", Path: "../../data/i2b2/converted/new_encounter_num.csv"},
 		"CONCEPT_DIMENSION": {TableName: I2B2DEMODATA + "concept_dimension", Path: "../../data/i2b2/converted/concept_dimension.csv"},
 		"OBSERVATION_FACT":  {TableName: I2B2DEMODATA + "observation_fact", Path: "../../data/i2b2/converted/observation_fact.csv"},
+
+		"SURVIVAL_FACT":           {TableName: SURVIVALDEMODATA + "observation_fact", Path: "../../data/i2b2/converted/survival_fact.csv"},
+		"TIME_DIMENSION":          {TableName: SURVIVALDEMODATA + "time_dimension", Path: "../../data/i2b2/converted/time_dimension.csv"},
+		"SURVIVAL_TYPE_DIMENSION": {TableName: SURVIVALDEMODATA + "type_dimension", Path: "../../data/i2b2/converted/type_dimension.csv"},
 	}
 
 	FileBashPath = "24-load-i2b2-data.sh"
@@ -130,6 +147,11 @@ func generateOutputFiles(folderPath string) {
 	// fixed ontology tables
 	OutputFilePaths["TABLE_ACCESS"] = FileInfo{TableName: ONT + "table_access", Path: folderPath + "table_access.csv"}
 	OutputFilePaths["SENSITIVE_TAGGED"] = FileInfo{TableName: ONT + "sensitive_tagged", Path: folderPath + "sensitive_tagged.csv"}
+
+	// fixed survival tables
+	OutputFilePaths["SURVIVAL_TYPE_DIMENSION"] = FileInfo{TableName: SURVIVALDEMODATA + "survival_type_dimension", Path: folderPath + "survival_type_dimension.csv"}
+	OutputFilePaths["TIME_DIMENSION"] = FileInfo{TableName: SURVIVALDEMODATA + "time_dimension", Path: folderPath + "time_dimension.csv"}
+	OutputFilePaths["SURVIVAL_FACT"] = FileInfo{TableName: SURVIVALDEMODATA + "survival_fact", Path: folderPath + "survival_fact.csv"}
 
 	for key, path := range InputFilePaths {
 		if strings.HasPrefix(key, "ONTOLOGY_") {
@@ -172,6 +194,9 @@ func LoadI2B2Data(el *onet.Roster, entryPointIdx int, directory string, files Fi
 	InputFilePaths["OBSERVATION_FACT"] = directory + "/" + files.ObservationFact
 	InputFilePaths["DUMMY_TO_PATIENT"] = directory + "/" + files.DummyToPatient
 
+	InputFilePaths["TIME_DIMENSION"] = directory + "/" + files.TimeDimension
+	InputFilePaths["SURVIVAL_TYPE_DIMENSION"] = directory + "/" + files.SurvivalTypeDimension
+	InputFilePaths["SURVIVAL_FACT"] = directory + "/" + files.SurvivalFact
 	// change output filepaths
 	generateOutputFiles(directory + "/" + files.OutputFolder)
 
@@ -246,19 +271,50 @@ func LoadI2B2Data(el *onet.Roster, entryPointIdx int, directory string, files Fi
 		return err
 	}
 
-	EventObservationBlobEncrypted, err = EncryptEventBlob(EventObservationBlob, el)
-	if err != nil {
-		return err
-	}
-
-	EncryptZeroEvent = func() (string, error) { return EventBlobForDummyPatient(el) }
-
 	err = ConvertObservationFact()
 	if err != nil {
 		return err
 	}
 
 	log.Lvl2("--- Finished converting OBSERVATION_FACT ---")
+
+	err = ParseSurvivalTypeDimension()
+	if err != nil {
+		return err
+	}
+
+	err = ConvertSurvivalTypeDimension()
+	if err != nil {
+		return err
+	}
+
+	log.Lvl2("--- Finished converting SURVIVAL_TYPE_DIMENSION ---")
+
+	err = ParseTimeDimension()
+	if err != nil {
+		return err
+	}
+
+	err = ConvertTimeDimension()
+	if err != nil {
+		return err
+	}
+
+	log.Lvl2("--- Finished converting TIME_DIMENSION ---")
+
+	err = ParseSurvivalFact()
+
+	if err != nil {
+		return err
+	}
+
+	err = ConvertSurvivalFact(el)
+
+	if err != nil {
+		return err
+	}
+
+	log.Lvl2("--- Finished converting SURVIVAL_FACT ---")
 
 	//log this somwhere !!!!!!!!!
 	err = GenerateLoadingDataScript(i2b2DB)
@@ -305,6 +361,8 @@ func GenerateLoadingDataScript(i2b2DB loader.DBSettings) error {
 		`\copy ` + OutputFilePaths["OBSERVATION_FACT"].TableName + ` FROM '` + OutputFilePaths["OBSERVATION_FACT"].Path + `' ESCAPE '"' DELIMITER ',' CSV HEADER;` + "\n"
 
 	loading += "\n"
+
+	loading += SurvivalTablesLoadingScript() + "\n"
 
 	for file, fI := range OutputFilePaths {
 		if strings.HasPrefix(file, "LOCAL_") {
@@ -385,7 +443,7 @@ func readCSV(filename string) ([][]string, error) {
 
 	lines, err := reader.ReadAll()
 	if err != nil {
-		log.Fatal("Error reading [" + strings.ToLower(filename) + "].csv")
+		log.Fatal("Error reading [" + strings.ToLower(filename) + "].csv " + err.Error())
 		return nil, err
 	}
 
@@ -1379,11 +1437,6 @@ func ParseObservationFact() error {
 		if _, ok := ListConceptsToIgnore[ofk.ConceptCD]; !ok {
 			TableObservationFact[ofk] = of
 
-			//if fact is a survival analysis
-			if IsSurvivalFact(ofk) {
-				EventObservationBlob[ofk] = of.ObservationBlob
-			}
-
 			// if patient does not exist
 			if _, ok := MapPatientObs[ofk.PatientNum]; !ok {
 				// create array and add the observation
@@ -1436,21 +1489,11 @@ func ConvertObservationFact() error {
 			return err
 		}
 	} else {
-		for ofk, of := range TableObservationFact {
+		for _, of := range TableObservationFact {
 
 			copyObs := of
-			survFact := IsSurvivalFact(ofk)
 
 			//observation blob for survival analysis
-			if survFact {
-				//ok is a extra check
-				cipherBlob, ok := EventObservationBlobEncrypted[ofk]
-				if !ok {
-					return fmt.Errorf("Key for %s was not found. Was the encrpytion of the observation blob performed ?", fmt.Sprint(*ofk))
-				}
-				copyObs.ObservationBlob = cipherBlob
-
-			}
 
 			// if dummy observation
 			if _, ok := TableDummyToPatient[of.PK.PatientNum]; ok {
@@ -1476,14 +1519,6 @@ func ConvertObservationFact() error {
 				copyObs.PK.ConceptCD = of.PK.ConceptCD
 				copyObs.AdminColumns.TextSearchIndex = of.AdminColumns.TextSearchIndex
 
-				//Encrypts a "0 0" event and writes it in the blob of the copyobs
-				if survFact {
-					copyObs.ObservationBlob, err = EncryptZeroEvent()
-
-					if err != nil {
-						return err
-					}
-				}
 				// delete observation from the list (so we don't choose it again)
 				listObs[index] = listObs[len(listObs)-1]
 				listObs = listObs[:len(listObs)-1]
