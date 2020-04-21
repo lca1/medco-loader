@@ -580,6 +580,17 @@ func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSetti
 				END;
 				\$\$ LANGUAGE plpgsql;` + "\n"
 
+	loading += `CREATE OR REPLACE FUNCTION genomic_annotations.ga_annotationexists(annotation varchar)
+				RETURNS boolean AS \$\$
+				BEGIN
+				RETURN EXISTS(
+					SELECT 1 FROM pg_tables where
+						schemaname = 'genomic_annotations' and
+						tablename = annotation
+				);
+				END;
+				\$\$ LANGUAGE plpgsql;` + "\n"
+
 	loading += "COMMIT;\n"
 	loading += "EOSQL"
 
