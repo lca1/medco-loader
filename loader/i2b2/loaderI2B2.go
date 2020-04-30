@@ -33,6 +33,32 @@ func init() {
 	}
 }
 
+func init() {
+	dpath := os.Getenv("DEFAULT_DATA_PATH")
+	if dpath == "" {
+		DefaultDataPath = "../../data/"
+		log.Warn("Couldn't parse DEFAULT_DATA_PATH, using default value: ", "../../data/")
+	} else {
+		DefaultDataPath = dpath
+	}
+
+	addDataPathToFiles()
+}
+
+func addDataPathToFiles() {
+	for k, v := range InputFilePaths {
+		InputFilePaths[k] = DefaultDataPath + v
+	}
+	for k, v := range OutputFilePaths {
+		tmp := OutputFilePaths[k]
+		tmp.Path = DefaultDataPath + v.Path
+		OutputFilePaths[k] = tmp
+	}
+}
+
+// DefaultDataPath is the default path for the data folder
+var DefaultDataPath string
+
 // Files is the object structure behind the files.toml
 type Files struct {
 	TableAccess           string
@@ -77,50 +103,47 @@ var (
 	}
 
 	InputFilePaths = map[string]string{
-		"ONTOLOGY_BIRN":              "../../data/i2b2/original/birn.csv",
-		"ONTOLOGY_CUSTOM_META":       "../../data/i2b2/original/custom_meta.csv",
-		"ONTOLOGY_ICD10_ICD9":        "../../data/i2b2/original/icd10_icd9.csv",
-		"ONTOLOGY_I2B2":              "../../data/i2b2/original/i2b2.csv",
-		"ONTOLOGY_SURVIVAL_ONTOLOGY": "../../data/i2b2/original/survival_ontology.csv",
+		"ONTOLOGY_BIRN":        "i2b2/original/birn.csv",
+		"ONTOLOGY_CUSTOM_META": "i2b2/original/custom_meta.csv",
+		"ONTOLOGY_ICD10_ICD9":  "i2b2/original/icd10_icd9.csv",
+		"ONTOLOGY_I2B2":        "i2b2/original/i2b2.csv",
 
-		"TABLE_ACCESS":      "../../data/i2b2/original/table_access.csv",
-		"DUMMY_TO_PATIENT":  "../../data/i2b2/original/dummy_to_patient.csv",
-		"PATIENT_DIMENSION": "../../data/i2b2/original/patient_dimension.csv",
-		"VISIT_DIMENSION":   "../../data/i2b2/original/visit_dimension.csv",
-		"CONCEPT_DIMENSION": "../../data/i2b2/original/concept_dimension.csv",
-		"OBSERVATION_FACT":  "../../data/i2b2/original/observation_fact.csv",
+		"TABLE_ACCESS":      "i2b2/original/table_access.csv",
+		"DUMMY_TO_PATIENT":  "i2b2/original/dummy_to_patient.csv",
+		"PATIENT_DIMENSION": "i2b2/original/patient_dimension.csv",
+		"VISIT_DIMENSION":   "i2b2/original/visit_dimension.csv",
+		"CONCEPT_DIMENSION": "i2b2/original/concept_dimension.csv",
+		"OBSERVATION_FACT":  "i2b2/original/observation_fact.csv",
 
-		"SURVIVAL_FACT":  "../../data/i2b2/survival/observation_fact.csv",
-		"TIME_DIMENSION": "../../data/i2b2/survival/time_dimension.csv",
-		"TYPE_DIMENSION": "../../data/i2b2/survival/type_dimension.csv",
+		"SURVIVAL_FACT":  "i2b2/survival/observation_fact.csv",
+		"TIME_DIMENSION": "i2b2/survival/time_dimension.csv",
+		"TYPE_DIMENSION": "i2b2/survival/type_dimension.csv",
 	}
 
 	OutputFilePaths = map[string]FileInfo{
-		"TABLE_ACCESS":     {TableName: ONT + "table_access", Path: "../../data/i2b2/converted/table_access.csv"},
-		"SENSITIVE_TAGGED": {TableName: ONT + "sensitive_tagged", Path: "../../data/i2b2/converted/sensitive_tagged.csv"},
+		"TABLE_ACCESS":     {TableName: ONT + "table_access", Path: "i2b2/converted/table_access.csv"},
+		"SENSITIVE_TAGGED": {TableName: ONT + "sensitive_tagged", Path: "i2b2/converted/sensitive_tagged.csv"},
 
-		"LOCAL_BIRN":              {TableName: I2B2METADATA + "birn", Path: "../../data/i2b2/converted/local_birn.csv"},
-		"LOCAL_CUSTOM_META":       {TableName: I2B2METADATA + "custom_meta", Path: "../../data/i2b2/converted/local_custom_meta.csv"},
-		"LOCAL_ICD10_ICD9":        {TableName: I2B2METADATA + "icd10_icd9", Path: "../../data/i2b2/converted/local_icd10_icd9.csv"},
-		"LOCAL_I2B2":              {TableName: I2B2METADATA + "i2b2", Path: "../../data/i2b2/converted/local_i2b2.csv"},
-		"LOCAL_SURVIVAL_ONTOLOGY": {TableName: SURVIVALDEMODATA + "survival_ontology", Path: "../../data/i2b2/converted/local_survival_ontology.csv"},
+		"LOCAL_BIRN":        {TableName: I2B2METADATA + "birn", Path: "i2b2/converted/local_birn.csv"},
+		"LOCAL_CUSTOM_META": {TableName: I2B2METADATA + "custom_meta", Path: "i2b2/converted/local_custom_meta.csv"},
+		"LOCAL_ICD10_ICD9":  {TableName: I2B2METADATA + "icd10_icd9", Path: "i2b2/converted/local_icd10_icd9.csv"},
+		"LOCAL_I2B2":        {TableName: I2B2METADATA + "i2b2", Path: "i2b2/converted/local_i2b2.csv"},
 
-		"MEDCO_BIRN":              {TableName: ONT + "birn", Path: "../../data/i2b2/converted/medco_birn.csv"},
-		"MEDCO_CUSTOM_META":       {TableName: ONT + "custom_meta", Path: "../../data/i2b2/converted/medco_custom_meta.csv"},
-		"MEDCO_ICD10_ICD9":        {TableName: ONT + "icd10_icd9", Path: "../../data/i2b2/converted/medco_icd10_icd9.csv"},
-		"MEDCO_I2B2":              {TableName: ONT + "i2b2", Path: "../../data/i2b2/converted/medco_i2b2.csv"},
-		"MEDCO_SURVIVAL_ONTOLOGY": {TableName: SURVIVALDEMODATA + "survival_ontology", Path: "../../data/i2b2/converted/medco_survival_ontology.csv"},
+		"MEDCO_BIRN":        {TableName: ONT + "birn", Path: "i2b2/converted/medco_birn.csv"},
+		"MEDCO_CUSTOM_META": {TableName: ONT + "custom_meta", Path: "i2b2/converted/medco_custom_meta.csv"},
+		"MEDCO_ICD10_ICD9":  {TableName: ONT + "icd10_icd9", Path: "i2b2/converted/medco_icd10_icd9.csv"},
+		"MEDCO_I2B2":        {TableName: ONT + "i2b2", Path: "i2b2/converted/medco_i2b2.csv"},
 
-		"PATIENT_DIMENSION": {TableName: I2B2DEMODATA + "patient_dimension", Path: "../../data/i2b2/converted/patient_dimension.csv"},
-		"NEW_PATIENT_NUM":   {TableName: "", Path: "../../data/i2b2/converted/new_patient_num.csv"},
-		"VISIT_DIMENSION":   {TableName: I2B2DEMODATA + "visit_dimension", Path: "../../data/i2b2/converted/visit_dimension.csv"},
-		"NEW_ENCOUNTER_NUM": {TableName: "", Path: "../../data/i2b2/converted/new_encounter_num.csv"},
-		"CONCEPT_DIMENSION": {TableName: I2B2DEMODATA + "concept_dimension", Path: "../../data/i2b2/converted/concept_dimension.csv"},
-		"OBSERVATION_FACT":  {TableName: I2B2DEMODATA + "observation_fact", Path: "../../data/i2b2/converted/observation_fact.csv"},
+		"PATIENT_DIMENSION": {TableName: I2B2DEMODATA + "patient_dimension", Path: "i2b2/converted/patient_dimension.csv"},
+		"NEW_PATIENT_NUM":   {TableName: "", Path: "i2b2/converted/new_patient_num.csv"},
+		"VISIT_DIMENSION":   {TableName: I2B2DEMODATA + "visit_dimension", Path: "i2b2/converted/visit_dimension.csv"},
+		"NEW_ENCOUNTER_NUM": {TableName: "", Path: "i2b2/converted/new_encounter_num.csv"},
+		"CONCEPT_DIMENSION": {TableName: I2B2DEMODATA + "concept_dimension", Path: "i2b2/converted/concept_dimension.csv"},
+		"OBSERVATION_FACT":  {TableName: I2B2DEMODATA + "observation_fact", Path: "i2b2/converted/observation_fact.csv"},
 
-		"SURVIVAL_FACT":           {TableName: SURVIVALDEMODATA + "observation_fact", Path: "../../data/i2b2/converted/survival_fact.csv"},
-		"TIME_DIMENSION":          {TableName: SURVIVALDEMODATA + "time_dimension", Path: "../../data/i2b2/converted/time_dimension.csv"},
-		"SURVIVAL_TYPE_DIMENSION": {TableName: SURVIVALDEMODATA + "type_dimension", Path: "../../data/i2b2/converted/type_dimension.csv"},
+		"SURVIVAL_FACT":           {TableName: SURVIVALDEMODATA + "observation_fact", Path: "i2b2/converted/survival_fact.csv"},
+		"TIME_DIMENSION":          {TableName: SURVIVALDEMODATA + "time_dimension", Path: "i2b2/converted/time_dimension.csv"},
+		"SURVIVAL_TYPE_DIMENSION": {TableName: SURVIVALDEMODATA + "type_dimension", Path: "i2b2/converted/type_dimension.csv"},
 	}
 
 	FileBashPath = "24-load-i2b2-data.sh"
@@ -433,7 +456,7 @@ func LoadDataFiles() error {
 func readCSV(filename string) ([][]string, error) {
 	csvInputFile, err := os.Open(InputFilePaths[filename])
 	if err != nil {
-		log.Fatal("Error opening [" + strings.ToLower(filename) + "].csv")
+		log.Fatal("Error opening [" + strings.ToLower(InputFilePaths[filename]) + "].csv")
 		return nil, err
 	}
 	defer csvInputFile.Close()
@@ -1058,7 +1081,6 @@ func ParsePatientDimension(pk kyber.Point) error {
 	for _, line := range lines[1:] {
 
 		pdk, pd := PatientDimensionFromString(line, pk)
-		logrus.Tracef("parsing patient number %s, at line %d ", pdk.PatientNum, line)
 		TablePatientDimension[pdk] = pd
 	}
 
@@ -1103,7 +1125,6 @@ func ConvertPatientDimension(pk kyber.Point, empty bool) error {
 	} else {
 		for _, pd := range TablePatientDimension {
 			MapNewPatientNum[pd.PK.PatientNum] = strconv.FormatInt(int64(perm[i]), 10)
-			logrus.Tracef("patient number %s has permutation %d", pd.PK.PatientNum, perm[i])
 			pd.PK.PatientNum = strconv.FormatInt(int64(perm[i]), 10)
 			csvOutputFile.WriteString(pd.ToCSVText(empty) + "\n")
 			i++
@@ -1111,7 +1132,6 @@ func ConvertPatientDimension(pk kyber.Point, empty bool) error {
 
 		// add dummies
 		for dummyNum, patientNum := range TableDummyToPatient {
-			logrus.Tracef("Patient dummy num %s permi %d", dummyNum, perm[i])
 			MapNewPatientNum[dummyNum] = strconv.FormatInt(int64(perm[i]), 10)
 
 			patient := TablePatientDimension[PatientDimensionPK{PatientNum: patientNum}]
@@ -1511,7 +1531,6 @@ func ConvertObservationFact() error {
 				}
 
 				index := rand.Intn(len(listObs))
-				logrus.Tracef("Dummy patient %s for index %d, has obs %v ", of.PK.PatientNum, index, *listObs[index])
 				copyObs = TableObservationFact[listObs[index]]
 
 				// change patient_num and encounter_num

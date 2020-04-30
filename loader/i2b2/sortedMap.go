@@ -62,7 +62,6 @@ func NewSortedTablePatientDimensionType(tablePatientDimension map[PatientDimensi
 
 func (sortedTablePatientDimension *SortedTablePatientDimensionType) ForEach(callBack func(entry entryType) error) (err error) {
 	for _, elm := range sortedTablePatientDimension.entries {
-		logrus.Trace(elm)
 		err = callBack(elm)
 		if err != nil {
 			return
@@ -87,10 +86,8 @@ func (internals *internalStates) LoaderI2B2CallBack(entry entryType) (err error)
 
 	pd := entry.value
 	MapNewPatientNum[pd.PK.PatientNum] = strconv.FormatInt(int64(internals.perm[*internals.i]), 10)
-	logrus.Tracef("patient number %s has permutation %d", pd.PK.PatientNum, internals.perm[*internals.i])
 	pd.PK.PatientNum = strconv.FormatInt(int64(internals.perm[*internals.i]), 10)
 	internals.csvOutputFile.WriteString(pd.ToCSVText(internals.empty) + "\n")
-	logrus.Trace("value of i ", strconv.Itoa(*internals.i))
 	*internals.i++
 	return nil
 
@@ -136,7 +133,6 @@ func (sortedTableObservationFact *SortedTableObservationFactType) Swap(i, j int)
 
 func (sortedTableObservationFact *SortedTableObservationFactType) ForEach(callBack func(entry factEntryType) error) (err error) {
 	for _, elm := range sortedTableObservationFact.entries {
-		logrus.Trace(elm)
 		err = callBack(elm)
 		if err != nil {
 			return
@@ -162,7 +158,6 @@ func (internals *internalStates) FactCallback(entry factEntryType) (err error) {
 
 	//for ofk, of := range TableObservationFact
 	of := entry.value
-	ofk := entry.key
 	copyObs := of
 
 	// if dummy observation
@@ -179,18 +174,14 @@ func (internals *internalStates) FactCallback(entry factEntryType) (err error) {
 		}
 
 		index := rand.Intn(len(listObs))
-		logrus.Tracef("Dummy patient %s for index %d, has obs %v ", of.PK.PatientNum, index, *listObs[index])
 		copyObs = TableObservationFact[listObs[index]]
 
 		// change patient_num and encounter_num
 		tmp := MapNewEncounterNum[VisitDimensionPK{EncounterNum: copyObs.PK.EncounterNum, PatientNum: of.PK.PatientNum}]
-		logrus.Tracef("Copy PatientNum %s EncounterNum %s", copyObs.PK.PatientNum, copyObs.PK.EncounterNum)
 		copyObs.PK = regenerateObservationPK(copyObs.PK, tmp.PatientNum, tmp.EncounterNum)
-		logrus.Tracef("Tmp PatientNum %s EncounterNum %s", copyObs.PK.PatientNum, copyObs.PK.EncounterNum)
 		// keep the same concept (and text_search_index) that was already there
 		copyObs.PK.ConceptCD = of.PK.ConceptCD
 		copyObs.AdminColumns.TextSearchIndex = of.AdminColumns.TextSearchIndex
-		logrus.Tracef("Dummy tmp has value %v", tmp)
 		// delete observation from the list (so we don't choose it again)
 		listObs[index] = listObs[len(listObs)-1]
 		listObs = listObs[:len(listObs)-1]
@@ -214,7 +205,6 @@ func (internals *internalStates) FactCallback(entry factEntryType) (err error) {
 
 	// TODO: connected with the previous TODO
 	if copyObs.PK.EncounterNum != "" {
-		logrus.Tracef("Final patient for  observation key %v, value %v is %s", *ofk, of, copyObs.PK.PatientNum)
 		internals.csvOutputFile.WriteString(copyObs.ToCSVText() + "\n")
 	}
 	return
@@ -272,7 +262,6 @@ func (sortedTableDummyToPatient *SortedTableDummyToPatientType) Swap(i, j int) {
 
 func (sortedTableDummyToPatient *SortedTableDummyToPatientType) ForEach(callBack func(entry dummyEntryType) error) (err error) {
 	for _, elm := range sortedTableDummyToPatient.entries {
-		logrus.Trace(elm)
 		err = callBack(elm)
 		if err != nil {
 			return
@@ -332,7 +321,6 @@ func (sortedTableVisitDimension *SortedTableVisitDimensionType) Swap(i, j int) {
 
 func (sortedTableVisitDimension *SortedTableVisitDimensionType) ForEach(callBack func(entry visitEntryType) error) (err error) {
 	for _, elm := range sortedTableVisitDimension.entries {
-		logrus.Trace(elm)
 		err = callBack(elm)
 		if err != nil {
 			return
@@ -357,7 +345,6 @@ func (internals *internalStates) VisitCallback(entry visitEntryType) error {
 func (internals *internalStates) DummyConversionCallback(entry dummyEntryType) error {
 	dummyNum := entry.key
 	patientNum := entry.value
-	logrus.Tracef("Patient dummy num %s permi %d", dummyNum, internals.perm[*internals.i])
 	MapNewPatientNum[dummyNum] = strconv.FormatInt(int64(internals.perm[*internals.i]), 10)
 
 	patient := TablePatientDimension[PatientDimensionPK{PatientNum: patientNum}]
@@ -378,7 +365,6 @@ func (internals *internalStates) DummyVisitCallback(entry dummyEntryType) error 
 	listPatientVisits := MapPatientVisits[patientNum]
 
 	for _, el := range listPatientVisits {
-		logrus.Tracef("EncounterNum %s PatientNum %s permi %d mapNewPatient %s ", el, dummyNum, internals.perm[*internals.i], MapNewPatientNum[dummyNum])
 		MapNewEncounterNum[VisitDimensionPK{EncounterNum: el, PatientNum: dummyNum}] = VisitDimensionPK{EncounterNum: strconv.FormatInt(int64(internals.perm[*internals.i]), 10), PatientNum: MapNewPatientNum[dummyNum]}
 		visit := TableVisitDimension[VisitDimensionPK{EncounterNum: el, PatientNum: patientNum}]
 		visit.PK.EncounterNum = strconv.FormatInt(int64(internals.perm[*internals.i]), 10)
