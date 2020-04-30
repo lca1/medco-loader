@@ -577,6 +577,8 @@ func ConvertTableAccess() error {
 	// remove the last ,
 	csvOutputFile.WriteString(headerString[:len(headerString)-1] + "\n")
 
+	//add the line for sensitive data
+	csvOutputFile.WriteString(TableAccessFromString([]string{"SENSITIVE_TAGGED", "SENSITIVE_TAGGED", "N", "1", `\medco\tagged\`, "Medco Sensitive Ontology", "N", "CH", "\\N", "\\N", "\\N", "concept_cd", "concept_dimension", "concept_path", "T", "LIKE", `\medco\tagged\`, "\\N", "Medco Sensitive Tagged Ontology", "\\N", "\\N", "\\N", "\\N"}).ToCSVText() + "\n")
 	for _, ta := range TableTableAccess {
 		csvOutputFile.WriteString(ta.ToCSVText() + "\n")
 	}
