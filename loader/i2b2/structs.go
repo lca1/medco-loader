@@ -238,6 +238,9 @@ var MapPatientObs map[string][]*ObservationFactPK
 // MapDummyObs maps dummies to the observation of the original patients they are related too
 var MapDummyObs map[string][]*ObservationFactPK
 
+// PatientsWithSensitiveObs contains patients with sensitive observations
+var PatientsWithSensitiveObs map[PatientDimensionPK]struct{}
+
 //-------------------------------------//
 
 // TableObservationFact is observation_fact table

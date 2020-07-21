@@ -80,7 +80,7 @@ func TestConvertPatientDimension(t *testing.T) {
 	loaderi2b2.ParseDummyToPatient()
 
 	assert.Nil(t, loaderi2b2.ParsePatientDimension(publicKey))
-	assert.Nil(t, loaderi2b2.ConvertPatientDimension(publicKey, false))
+	assert.Nil(t, loaderi2b2.ConvertPatientDimension(publicKey))
 
 	local.CloseAll()
 }
@@ -92,10 +92,10 @@ func TestConvertVisitDimension(t *testing.T) {
 	loaderi2b2.ParseDummyToPatient()
 
 	loaderi2b2.ParsePatientDimension(publicKey)
-	loaderi2b2.ConvertPatientDimension(publicKey, false)
+	loaderi2b2.ConvertPatientDimension(publicKey)
 
 	assert.Nil(t, loaderi2b2.ParseVisitDimension())
-	assert.Nil(t, loaderi2b2.ConvertVisitDimension(false))
+	assert.Nil(t, loaderi2b2.ConvertVisitDimension())
 
 	local.CloseAll()
 }
@@ -196,7 +196,7 @@ func TestConvertAll(t *testing.T) {
 	loaderi2b2.AllSensitive = false
 
 	loaderi2b2.ListSensitiveConcepts = make(map[string]struct{})
-	loaderi2b2.ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Benign neoplasms (210-229)\(216) Benign neoplasm of skin\`] = struct{}{}
+	loaderi2b2.ListSensitiveConcepts[`\i2b2\Diagnoses\`] = struct{}{}
 
 	assert.Nil(t, loaderi2b2.ConvertLocalOntology(el, 0))
 
@@ -206,31 +206,48 @@ func TestConvertAll(t *testing.T) {
 
 	log.LLvl1("--- Finished generating MEDCO_ONTOLOGY ---")
 
-	assert.Nil(t, loaderi2b2.ParseDummyToPatient())
-
-	assert.Nil(t, loaderi2b2.ParsePatientDimension(publicKey))
-	assert.Nil(t, loaderi2b2.ConvertPatientDimension(publicKey, true))
-
-	log.LLvl1("--- Finished converting PATIENT_DIMENSION ---")
-
-	assert.Nil(t, loaderi2b2.ParseVisitDimension())
-	assert.Nil(t, loaderi2b2.ConvertVisitDimension(true))
-
-	log.LLvl1("--- Finished converting VISIT_DIMENSION ---")
-
 	assert.Nil(t, loaderi2b2.ParseConceptDimension())
 	assert.Nil(t, loaderi2b2.ConvertConceptDimension())
 
 	log.LLvl1("--- Finished converting CONCEPT_DIMENSION ---")
 
-	assert.Nil(t, loaderi2b2.ParseObservationFact())
-	assert.Nil(t, loaderi2b2.ConvertObservationFact())
+	assert.Nil(t, loaderi2b2.FilterOldObservationFact())
 
-	log.LLvl1("--- Finished converting OBSERVATION_FACT ---")
+	log.Lvl1("--- Finished filtering OLD_OBSERVATION_FACT ---")
+
+	assert.Nil(t, loaderi2b2.FilterPatientDimension(publicKey))
+
+	log.Lvl1("--- Finished filtering PATIENT_DIMENSION ---")
+
+	assert.Nil(t, loaderi2b2.CallGenerateDummiesScript())
+
+	log.Lvl1("--- Finished dummies generation ---")
+
+	assert.Nil(t, loaderi2b2.ParseDummyToPatient())
+
+	assert.Nil(t, loaderi2b2.ParsePatientDimension(publicKey))
+	assert.Nil(t, loaderi2b2.ConvertPatientDimension(publicKey))
+
+	log.LLvl1("--- Finished converting PATIENT_DIMENSION ---")
+
+	assert.Nil(t, loaderi2b2.ParseVisitDimension())
+	assert.Nil(t, loaderi2b2.ConvertVisitDimension())
+
+	log.LLvl1("--- Finished converting VISIT_DIMENSION ---")
+
+	assert.Nil(t, loaderi2b2.ParseNonSensitiveObservationFact())
+	assert.Nil(t, loaderi2b2.ConvertNonSensitiveObservationFact())
+
+	log.LLvl1("--- Finished converting non sensitive OBSERVATION_FACT ---")
+
+	assert.Nil(t, loaderi2b2.ParseSensitiveObservationFact())
+	assert.Nil(t, loaderi2b2.ConvertSensitiveObservationFact())
+
+	log.LLvl1("--- Finished converting sensitive OBSERVATION_FACT ---")
 
 	local.CloseAll()
 }
 
 func TestGenerateLoadingDataScript(t *testing.T) {
-	assert.Nil(t, loaderi2b2.GenerateLoadingDataScript(loader.DBSettings{DBhost: "localhost", DBport: 5434, DBname: "i2b2medcosrv0", DBuser: "i2b2", DBpassword: "i2b2"}))
+	assert.Nil(t, loaderi2b2.GenerateLoadingDataScriptSensitive(loader.DBSettings{DBhost: "localhost", DBport: 5434, DBname: "i2b2medcosrv0", DBuser: "i2b2", DBpassword: "i2b2"}))
 }
