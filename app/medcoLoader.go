@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/urfave/cli"
 	"os"
+
+	"github.com/urfave/cli"
 
 	"go.dedis.ch/onet/v3/log"
 	"go.dedis.ch/onet/v3/network"
@@ -186,27 +187,27 @@ func main() {
 		cli.StringFlag{
 			Name:   optionGaDBhost + ", " + optionGaDBhostShort,
 			Usage:  "Genomic annotations database hostname",
-			EnvVar: "GA_DB_HOST",
+			EnvVar: "MC_DB_HOST",
 		},
 		cli.IntFlag{
 			Name:   optionGaDBport + ", " + optionGaDBportShort,
 			Usage:  "Genomic annotations database port",
-			EnvVar: "GA_DB_PORT",
+			EnvVar: "MC_DB_PORT",
 		},
 		cli.StringFlag{
 			Name:   optionGaDBname + ", " + optionGaDBnameShort,
 			Usage:  "Genomic annotations database name",
-			EnvVar: "GA_DB_NAME",
+			EnvVar: "MC_DB_NAME",
 		},
 		cli.StringFlag{
 			Name:   optionGaDBuser + ", " + optionGaDBuserShort,
 			Usage:  "Genomic annotations database user",
-			EnvVar: "GA_DB_USER",
+			EnvVar: "MC_DB_USER",
 		},
 		cli.StringFlag{
 			Name:   optionGaDBpassword + ", " + optionGaDBpasswordShort,
 			Usage:  "Genomic annotations database password",
-			EnvVar: "GA_DB_PASSWORD",
+			EnvVar: "MC_DB_PASSWORD",
 		},
 	}
 	loaderFlagsv0 = append(loaderFlagsCommon, loaderFlagsv0...)

@@ -6,18 +6,19 @@ import (
 	"encoding/binary"
 	"encoding/csv"
 	"errors"
-	"github.com/ldsec/medco-loader/loader"
-	"github.com/ldsec/medco-loader/loader/identifiers"
-	"github.com/ldsec/medco-unlynx/services"
-	"github.com/ldsec/unlynx/lib"
-	"go.dedis.ch/onet/v3"
-	"go.dedis.ch/onet/v3/log"
 	"io"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ldsec/medco-loader/loader"
+	"github.com/ldsec/medco-loader/loader/identifiers"
+	servicesmedco "github.com/ldsec/medco-unlynx/services"
+	libunlynx "github.com/ldsec/unlynx/lib"
+	"go.dedis.ch/onet/v3"
+	"go.dedis.ch/onet/v3/log"
 )
 
 func init() {
@@ -515,11 +516,11 @@ func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSetti
 				gene_value character varying(255) NOT NULL PRIMARY KEY);
 		
 				-- permissions
-				ALTER TABLE genomic_annotations.genomic_annotations OWNER TO $GA_DB_USER;
-				ALTER TABLE genomic_annotations.annotation_names OWNER TO $GA_DB_USER;
-				ALTER TABLE genomic_annotations.gene_values OWNER TO $GA_DB_USER;
-				GRANT ALL on schema genomic_annotations to $GA_DB_USER;
-				GRANT ALL privileges on all tables in schema genomic_annotations to $GA_DB_USER;` + "\n"
+				ALTER TABLE genomic_annotations.genomic_annotations OWNER TO $MC_DB_USER;
+				ALTER TABLE genomic_annotations.annotation_names OWNER TO $MC_DB_USER;
+				ALTER TABLE genomic_annotations.gene_values OWNER TO $MC_DB_USER;
+				GRANT ALL on schema genomic_annotations to $MC_DB_USER;
+				GRANT ALL privileges on all tables in schema genomic_annotations to $MC_DB_USER;` + "\n"
 
 	//TODO: Delete this please
 	loading += "TRUNCATE " + TablenamesOntology[2] + ";\n"
