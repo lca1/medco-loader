@@ -13,6 +13,9 @@ import (
 // Testing defines whether we should run the DDT on test environment (locally) or using real nodes
 var Testing bool // testing environment
 
+// EnabledModifiers defines whether we are using modifiers or not
+var EnabledModifiers bool
+
 // ListSensitiveConcepts list all sensitive concepts (paths) - MedCo and LOCAL (the bool is for nothing)
 var ListSensitiveConcepts map[string]struct{}
 
@@ -77,7 +80,7 @@ func (ta TableAccess) ToCSVText() string {
 
 // MedCoTableInfo stores all the 'data' for a specific medco ontology table
 type MedCoTableInfo struct {
-	Clear     map[string]*MedCoOntology
+	Clear     map[string][]*MedCoOntology // we need a slice because multiple modifiers can have the same path
 	Sensitive map[string]*MedCoOntology
 }
 
@@ -154,8 +157,8 @@ func (so MedCoOntology) ToCSVText() string {
 
 //-------------------------------------//
 
-// TableLocalOntologyClear is the local ontology table (it maps the concept path to a concept) with only the NON_SENSITIVE concepts (it INCLUDES MODIFIER NON-SENSITIVE concepts)
-var TableLocalOntologyClear map[string]*LocalOntology
+// TableLocalOntologyClear is the local ontology table containing only the non sensitive concepts (it includes modifiers with non sensitive m_applied_path)
+var TableLocalOntologyClear map[string][]*LocalOntology // we need a slice because multiple modifiers can have the same path
 
 // TagAndID is a struct that contains both Tag and TagID for a concept or modifier
 type TagAndID struct {
@@ -174,6 +177,17 @@ var MapConceptPathToTag map[string]TagAndID
 
 // HeaderLocalOntology contains all the headers for the i2b2 table
 var HeaderLocalOntology []string
+
+type modifiersMap struct {
+	applied  []*LocalOntology
+	excluded map[string]*LocalOntology //the key is the fullname of the modifier
+}
+
+// Modifiers contains all the modifiers contained in the ontology tables
+var Modifiers map[string]*modifiersMap // the key is the modifier's m_applied_path
+
+// GeneratedConcepts contains the concepts generated from the modifiers
+var GeneratedConcepts map[string][]*MedCoOntology // the key is the path of the generator concept
 
 // LocalOntology is the table that contains all concept codes from the local ontology (i2b2)
 type LocalOntology struct {
@@ -310,7 +324,7 @@ var MapNewPatientNum map[string]string
 //-------------------------------------//
 
 // TablePatientDimension is patient_dimension table
-var TablePatientDimension map[PatientDimensionPK]PatientDimension
+var TablePatientDimension map[PatientDimensionPK]*PatientDimension
 
 // HeaderPatientDimension contains all the headers for the Patient_Dimension table
 var HeaderPatientDimension []string
@@ -388,10 +402,13 @@ var MapPatientVisits map[string][]string
 // MaxVisits keeps track of the maximum number of visits of all the patients
 var MaxVisits int
 
+// VisitsWithNonSensitiveObs contains the visits with at least one non sensitive observation
+var VisitsWithNonSensitiveObs map[VisitDimensionPK]struct{}
+
 //-------------------------------------//
 
 // TableVisitDimension is visit_dimension table
-var TableVisitDimension map[VisitDimensionPK]VisitDimension
+var TableVisitDimension map[VisitDimensionPK]*VisitDimension
 
 // HeaderVisitDimension contains all the headers for the visit_dimension table
 var HeaderVisitDimension []string
@@ -447,7 +464,7 @@ func (vd VisitDimension) ToCSVText(empty bool) string {
 //-------------------------------------//
 
 // TableConceptDimension is concept_dimension table
-var TableConceptDimension map[*ConceptDimensionPK]ConceptDimension
+var TableConceptDimension map[ConceptDimensionPK]*ConceptDimension
 
 // HeaderConceptDimension contains all the headers for the concept_dimension table
 var HeaderConceptDimension []string
@@ -464,7 +481,7 @@ type ConceptDimension struct {
 	AdminColumns AdministrativeColumns
 }
 
-// ConceptDimensionPK is the primary key of the Concept_Dimension table
+// ConceptDimensionPK is the primary key of the concept_dimension table
 type ConceptDimensionPK struct {
 	ConceptPath string
 }
@@ -480,6 +497,36 @@ func (cd ConceptDimension) ToCSVText() string {
 // ConceptDimensionSensitiveToCSVText writes the tagging information of a concept of the concept_dimension table in a way that can be added to a .csv file - "","","", etc.
 func ConceptDimensionSensitiveToCSVText(tag *libunlynx.GroupingKey, tagID int64) string {
 	finalString := `"\medco\tagged\concept\` + string(*tag) + `\","TAG_ID:` + strconv.FormatInt(tagID, 10) + `","\N","\N","\N","\N","NOW()","\N","\N"`
+
+	return strings.Replace(finalString, `"\N"`, "", -1)
+}
+
+//-------------------------------------//
+
+// TableModifierDimension is modifier_dimension table
+var TableModifierDimension map[ModifierDimensionPK]*ModifierDimension
+
+// HeaderModifierDimension contains all the headers for the modifier_dimension table
+var HeaderModifierDimension []string
+
+// ModifierDimension table contains one row for each concept
+type ModifierDimension struct {
+	PK           *ModifierDimensionPK
+	ModifierCD   string
+	NameChar     string
+	ModifierBlob string
+	AdminColumns AdministrativeColumns
+}
+
+// ModifierDimensionPK is the primary key of the modifier_dimension table
+type ModifierDimensionPK struct {
+	ModifierPath string
+}
+
+// ToCSVText writes the ModifierDimension object in a way that can be added to a .csv file - "","","", etc.
+func (md ModifierDimension) ToCSVText() string {
+	acString := "\"" + md.AdminColumns.UpdateDate + "\"," + "\"" + md.AdminColumns.DownloadDate + "\"," + "\"" + md.AdminColumns.ImportDate + "\"," + "\"" + md.AdminColumns.SourceSystemCD + "\"," + "\"" + md.AdminColumns.UploadID + "\""
+	finalString := "\"" + md.PK.ModifierPath + "\"," + "\"" + md.ModifierCD + "\"," + "\"" + md.NameChar + "\"," + "\"" + md.ModifierBlob + "\"," + acString
 
 	return strings.Replace(finalString, `"\N"`, "", -1)
 }
@@ -596,7 +643,7 @@ func LocalOntologyFromString(line []string, plainCode bool) *LocalOntology {
 }
 
 // PatientDimensionFromString generates a PatientDimension struct from a parsed line of a .csv file
-func PatientDimensionFromString(line []string, pk kyber.Point) (PatientDimensionPK, PatientDimension) {
+func PatientDimensionFromString(line []string, pk kyber.Point) (PatientDimensionPK, *PatientDimension) {
 	pdk := PatientDimensionPK{
 		PatientNum: line[0],
 	}
@@ -631,11 +678,11 @@ func PatientDimensionFromString(line []string, pk kyber.Point) (PatientDimension
 	pd.AdminColumns = ac
 	pd.EncryptedFlag = *ef
 
-	return pdk, pd
+	return pdk, &pd
 }
 
 // VisitDimensionFromString generates a VisitDimension struct from a parsed line of a .csv file
-func VisitDimensionFromString(line []string) (VisitDimensionPK, VisitDimension) {
+func VisitDimensionFromString(line []string) (VisitDimensionPK, *VisitDimension) {
 	vdk := VisitDimensionPK{
 		EncounterNum: line[0],
 		PatientNum:   line[1],
@@ -668,17 +715,17 @@ func VisitDimensionFromString(line []string) (VisitDimensionPK, VisitDimension) 
 	vd.OptionalFields = of
 	vd.AdminColumns = ac
 
-	return vdk, vd
+	return vdk, &vd
 }
 
 // ConceptDimensionFromString generates a ConceptDimension struct from a parsed line of a .csv file
-func ConceptDimensionFromString(line []string) (*ConceptDimensionPK, ConceptDimension) {
-	cdk := &ConceptDimensionPK{
+func ConceptDimensionFromString(line []string) (ConceptDimensionPK, *ConceptDimension) {
+	cdk := ConceptDimensionPK{
 		ConceptPath: strings.Replace(line[0], "\"", "\"\"", -1),
 	}
 
 	cd := ConceptDimension{
-		PK:          cdk,
+		PK:          &cdk,
 		ConceptCD:   line[1],
 		NameChar:    strings.Replace(line[2], "\"", "\"\"", -1),
 		ConceptBlob: line[3],
@@ -694,7 +741,52 @@ func ConceptDimensionFromString(line []string) (*ConceptDimensionPK, ConceptDime
 
 	cd.AdminColumns = ac
 
-	return cdk, cd
+	return cdk, &cd
+}
+
+// ModifierDimensionFromString generates a ModifierDimension struct from a parsed line of a .csv file
+func ModifierDimensionFromString(line []string) (ModifierDimensionPK, *ModifierDimension) {
+	mdk := ModifierDimensionPK{
+		ModifierPath: strings.Replace(line[0], "\"", "\"\"", -1),
+	}
+
+	md := ModifierDimension{
+		PK:           &mdk,
+		ModifierCD:   line[1],
+		NameChar:     strings.Replace(line[2], "\"", "\"\"", -1),
+		ModifierBlob: line[3],
+	}
+
+	ac := AdministrativeColumns{
+		UpdateDate:     line[4],
+		DownloadDate:   line[5],
+		ImportDate:     line[6],
+		SourceSystemCD: line[7],
+		UploadID:       line[8],
+	}
+
+	md.AdminColumns = ac
+
+	return mdk, &md
+}
+
+func ModifierDimensionToConceptDimension(mdk *ModifierDimension) *ConceptDimension {
+
+	cdk := &ConceptDimensionPK{
+		ConceptPath: mdk.PK.ModifierPath,
+	}
+
+	cd := &ConceptDimension{
+		PK:          cdk,
+		ConceptCD:   mdk.ModifierCD,
+		NameChar:    mdk.NameChar,
+		ConceptBlob: mdk.ModifierBlob,
+	}
+
+	cd.AdminColumns = mdk.AdminColumns
+
+	return cd
+
 }
 
 // ObservationFactFromString generates a ObservationFact struct from a parsed line of a .csv file
@@ -705,7 +797,7 @@ func ObservationFactFromString(line []string) (*ObservationFactPK, ObservationFa
 		ConceptCD:    line[2],
 		ProviderID:   line[3],
 		StartDate:    line[4],
-		ModifierCD:   "", //TODO we do not consider modifiers
+		ModifierCD:   line[5],
 		InstanceNum:  line[6],
 	}
 

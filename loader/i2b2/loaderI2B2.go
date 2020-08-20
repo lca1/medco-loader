@@ -2,6 +2,7 @@ package loaderi2b2
 
 import (
 	"encoding/csv"
+	"fmt"
 	"github.com/ldsec/medco-loader/loader"
 	"github.com/ldsec/medco-unlynx/services"
 	"github.com/ldsec/unlynx/lib"
@@ -11,6 +12,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -19,9 +21,125 @@ import (
 const (
 	// PATH_NON_SENSITIVE path of non sensitive data files
 	PATH_NON_SENSITIVE = "i2b2/converted/non_sensitive/"
+
 	// PATH_SENSITIVE path of sensitive data files
 	PATH_SENSITIVE = "i2b2/converted/sensitive/"
+
+	// I2B2METADATA_NON_SENSITIVE path to i2b2metadata_i2b2_non_sensitive schema
+	I2B2METADATA_NON_SENSITIVE = "i2b2metadata_i2b2_non_sensitive."
+
+	// I2B2DEMODATA_NON_SENSITIVE path to i2b2demodata_i2b2_non_sensitive schema
+	I2B2DEMODATA_NON_SENSITIVE = "i2b2demodata_i2b2_non_sensitive."
+
+	// I2B2DEMODATA_SENSITIVE path to i2b2demodata_i2b2_sensitive schema
+	I2B2DEMODATA_SENSITIVE = "i2b2demodata_i2b2_sensitive."
+
+	// ONT_NON_SENSITIVE path to medco_ont_non_sensitive schema
+	ONT_NON_SENSITIVE = "medco_ont_non_sensitive."
+
+	// ONT_SENSITIVE path to medco_ont_sensitive schema
+	ONT_SENSITIVE = "medco_ont_sensitive."
+
+	// Header is a generic XML header suitable for use with the output of Marshal.
+	// This is not automatically added to any output of this package,
+	// it is provided as a convenience.
+	Header = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` + "\n"
 )
+
+// The different paths and handlers for all the files both for input and/or output
+var (
+	OntologyFilesPaths = []string{
+		"ONTOLOGY_BIRN",
+		"ONTOLOGY_CUSTOM_META",
+		"ONTOLOGY_ICD10_ICD9",
+		"ONTOLOGY_I2B2",
+	}
+
+	InputFilePaths = map[string]string{
+		"ONTOLOGY_BIRN":        "i2b2/original/birn.csv",
+		"ONTOLOGY_CUSTOM_META": "i2b2/original/custom_meta.csv",
+		"ONTOLOGY_ICD10_ICD9":  "i2b2/original/icd10_icd9.csv",
+		"ONTOLOGY_I2B2":        "i2b2/original/i2b2.csv",
+
+		"TABLE_ACCESS":         "i2b2/original/table_access.csv",
+		"DUMMY_TO_PATIENT":     "i2b2/original/dummy_to_patient.csv",
+		"PATIENT_DIMENSION":    "i2b2/original/patient_dimension.csv",
+		"VISIT_DIMENSION":      "i2b2/original/visit_dimension.csv",
+		"CONCEPT_DIMENSION":    "i2b2/original/concept_dimension.csv",
+		"MODIFIER_DIMENSION":   "i2b2/original/modifier_dimension.csv",
+		"OBSERVATION_FACT_OLD": "i2b2/original/observation_fact_old.csv",
+	}
+
+	OutputFilesPathsNonSensitive = map[string]FileInfo{
+		"TABLE_ACCESS": {TableName: ONT_NON_SENSITIVE + "table_access", Path: PATH_NON_SENSITIVE + "table_access.csv"},
+
+		"LOCAL_BIRN":        {TableName: I2B2METADATA_NON_SENSITIVE + "birn", Path: PATH_NON_SENSITIVE + "local_birn.csv"},
+		"LOCAL_CUSTOM_META": {TableName: I2B2METADATA_NON_SENSITIVE + "custom_meta", Path: PATH_NON_SENSITIVE + "local_custom_meta.csv"},
+		"LOCAL_ICD10_ICD9":  {TableName: I2B2METADATA_NON_SENSITIVE + "icd10_icd9", Path: PATH_NON_SENSITIVE + "local_icd10_icd9.csv"},
+		"LOCAL_I2B2":        {TableName: I2B2METADATA_NON_SENSITIVE + "i2b2", Path: PATH_NON_SENSITIVE + "local_i2b2.csv"},
+
+		"MEDCO_BIRN":        {TableName: ONT_NON_SENSITIVE + "birn", Path: PATH_NON_SENSITIVE + "medco_birn.csv"},
+		"MEDCO_CUSTOM_META": {TableName: ONT_NON_SENSITIVE + "custom_meta", Path: PATH_NON_SENSITIVE + "medco_custom_meta.csv"},
+		"MEDCO_ICD10_ICD9":  {TableName: ONT_NON_SENSITIVE + "icd10_icd9", Path: PATH_NON_SENSITIVE + "medco_icd10_icd9.csv"},
+		"MEDCO_I2B2":        {TableName: ONT_NON_SENSITIVE + "i2b2", Path: PATH_NON_SENSITIVE + "medco_i2b2.csv"},
+
+		"PATIENT_DIMENSION":         {TableName: I2B2DEMODATA_NON_SENSITIVE + "patient_dimension", Path: PATH_NON_SENSITIVE + "patient_dimension.csv"},
+		"VISIT_DIMENSION":           {TableName: I2B2DEMODATA_NON_SENSITIVE + "visit_dimension", Path: PATH_NON_SENSITIVE + "visit_dimension.csv"},
+		"CONCEPT_DIMENSION":         {TableName: I2B2DEMODATA_NON_SENSITIVE + "concept_dimension", Path: PATH_NON_SENSITIVE + "concept_dimension.csv"},
+		"MODIFIER_DIMENSION":        {TableName: I2B2DEMODATA_NON_SENSITIVE + "modifier_dimension", Path: PATH_NON_SENSITIVE + "modifier_dimension.csv"},
+		"OBSERVATION_FACT_FILTERED": {TableName: "", Path: PATH_NON_SENSITIVE + "observation_fact_filtered.csv"},
+		"OBSERVATION_FACT":          {TableName: I2B2DEMODATA_NON_SENSITIVE + "observation_fact", Path: PATH_NON_SENSITIVE + "observation_fact.csv"},
+	}
+
+	OutputFilesPathsSensitive = map[string]FileInfo{
+		"TABLE_ACCESS": {TableName: ONT_SENSITIVE + "table_access", Path: PATH_SENSITIVE + "table_access.csv"},
+
+		"SENSITIVE_TAGGED": {TableName: ONT_SENSITIVE + "sensitive_tagged", Path: PATH_SENSITIVE + "sensitive_tagged.csv"},
+
+		"MEDCO_BIRN":        {TableName: ONT_SENSITIVE + "birn", Path: PATH_SENSITIVE + "medco_birn.csv"},
+		"MEDCO_CUSTOM_META": {TableName: ONT_SENSITIVE + "custom_meta", Path: PATH_SENSITIVE + "medco_custom_meta.csv"},
+		"MEDCO_ICD10_ICD9":  {TableName: ONT_SENSITIVE + "icd10_icd9", Path: PATH_SENSITIVE + "medco_icd10_icd9.csv"},
+		"MEDCO_I2B2":        {TableName: ONT_SENSITIVE + "i2b2", Path: PATH_SENSITIVE + "medco_i2b2.csv"},
+
+		"PATIENT_DIMENSION_FILTERED":    {TableName: "", Path: PATH_SENSITIVE + "patient_dimension_filtered.csv"},
+		"PATIENT_DIMENSION":             {TableName: I2B2DEMODATA_SENSITIVE + "patient_dimension", Path: PATH_SENSITIVE + "patient_dimension.csv"},
+		"NEW_PATIENT_NUM":               {TableName: "", Path: PATH_SENSITIVE + "new_patient_num.csv"},
+		"CONCEPT_DIMENSION":             {TableName: I2B2DEMODATA_SENSITIVE + "concept_dimension", Path: PATH_SENSITIVE + "concept_dimension.csv"},
+		"OBSERVATION_FACT_FILTERED":     {TableName: "", Path: PATH_SENSITIVE + "observation_fact_filtered.csv"},
+		"OBSERVATION_FACT_WITH_DUMMIES": {TableName: "", Path: PATH_SENSITIVE + "observation_fact_with_dummies.csv"},
+		"OBSERVATION_FACT":              {TableName: I2B2DEMODATA_SENSITIVE + "observation_fact", Path: PATH_SENSITIVE + "observation_fact.csv"},
+
+		// we do not used this file, it is needed by the script generating the dummies
+		"PATIENT_DIMENSION_SCRIPT": {TableName: "", Path: PATH_SENSITIVE + "patient_dimension_script.csv"},
+	}
+
+	FileBashPathNonSensitive = "24-load-non-sensitive-i2b2-data.sh"
+	FileBashPathSensitive    = "24-load-sensitive-i2b2-data.sh"
+
+	FilePythonGenerateDummies = "../../import-tool/using_clustering.py"
+)
+
+// DefaultDataPath is the default path for the data folder
+var DefaultDataPath string
+
+// Files is the object structure behind the files.toml
+type Files struct {
+	TableAccess       string
+	Ontology          []string
+	DummyToPatient    string
+	PatientDimension  string
+	VisitDimension    string
+	ConceptDimension  string
+	ModifierDimension string
+	ObservationFact   string
+	OutputFolder      string
+}
+
+// FileInfo contains the tablename where the .csv should be loaded and the output path
+type FileInfo struct {
+	TableName string
+	Path      string
+}
 
 func init() {
 	dpath := os.Getenv("DEFAULT_DATA_PATH")
@@ -33,7 +151,6 @@ func init() {
 	}
 
 	addDataPathToFiles()
-
 	createDirectories()
 
 }
@@ -61,170 +178,7 @@ func createDirectories() {
 
 }
 
-// DefaultDataPath is the default path for the data folder
-var DefaultDataPath string
-
-// Files is the object structure behind the files.toml
-type Files struct {
-	TableAccess       string
-	Ontology          []string
-	DummyToPatient    string
-	PatientDimension  string
-	VisitDimension    string
-	ConceptDimension  string
-	ModifierDimension string
-	ObservationFact   string
-	OutputFolder      string
-}
-
-// FileInfo contains the tablename where the .csv should be loaded and the output path
-type FileInfo struct {
-	TableName string
-	Path      string
-}
-
-// I2B2METADATA_NON_SENSITIVE path to i2b2metadata_i2b2_non_sensitive schema
-const I2B2METADATA_NON_SENSITIVE = "i2b2metadata_i2b2_non_sensitive."
-
-// I2B2DEMODATA_NON_SENSITIVE path to i2b2demodata_i2b2_non_sensitive schema
-const I2B2DEMODATA_NON_SENSITIVE = "i2b2demodata_i2b2_non_sensitive."
-
-// I2B2DEMODATA_SENSITIVE path to i2b2demodata_i2b2_sensitive schema
-const I2B2DEMODATA_SENSITIVE = "i2b2demodata_i2b2_sensitive."
-
-// ONT_NON_SENSITIVE path to medco_ont_non_sensitive schema
-const ONT_NON_SENSITIVE = "medco_ont_non_sensitive."
-
-// ONT_SENSITIVE path to medco_ont_sensitive schema
-const ONT_SENSITIVE = "medco_ont_sensitive."
-
-// The different paths and handlers for all the files both for input and/or output
-var (
-	OntologyFilesPaths = []string{
-		"ONTOLOGY_BIRN",
-		"ONTOLOGY_CUSTOM_META",
-		"ONTOLOGY_ICD10_ICD9",
-		"ONTOLOGY_I2B2",
-	}
-
-	InputFilePaths = map[string]string{
-		"ONTOLOGY_BIRN":        "i2b2/original/birn.csv",
-		"ONTOLOGY_CUSTOM_META": "i2b2/original/custom_meta.csv",
-		"ONTOLOGY_ICD10_ICD9":  "i2b2/original/icd10_icd9.csv",
-		"ONTOLOGY_I2B2":        "i2b2/original/i2b2.csv",
-
-		"TABLE_ACCESS":         "i2b2/original/table_access.csv",
-		"DUMMY_TO_PATIENT":     "i2b2/original/dummy_to_patient.csv",
-		"PATIENT_DIMENSION":    "i2b2/original/patient_dimension.csv",
-		"VISIT_DIMENSION":      "i2b2/original/visit_dimension.csv",
-		"CONCEPT_DIMENSION":    "i2b2/original/concept_dimension.csv",
-		"OBSERVATION_FACT_OLD": "i2b2/original/observation_fact_old.csv",
-	}
-
-	OutputFilesPathsNonSensitive = map[string]FileInfo{
-		"TABLE_ACCESS": {TableName: ONT_NON_SENSITIVE + "table_access", Path: PATH_NON_SENSITIVE + "table_access.csv"},
-
-		"LOCAL_BIRN":        {TableName: I2B2METADATA_NON_SENSITIVE + "birn", Path: PATH_NON_SENSITIVE + "local_birn.csv"},
-		"LOCAL_CUSTOM_META": {TableName: I2B2METADATA_NON_SENSITIVE + "custom_meta", Path: PATH_NON_SENSITIVE + "local_custom_meta.csv"},
-		"LOCAL_ICD10_ICD9":  {TableName: I2B2METADATA_NON_SENSITIVE + "icd10_icd9", Path: PATH_NON_SENSITIVE + "local_icd10_icd9.csv"},
-		"LOCAL_I2B2":        {TableName: I2B2METADATA_NON_SENSITIVE + "i2b2", Path: PATH_NON_SENSITIVE + "local_i2b2.csv"},
-
-		"MEDCO_BIRN":        {TableName: ONT_NON_SENSITIVE + "birn", Path: PATH_NON_SENSITIVE + "medco_birn.csv"},
-		"MEDCO_CUSTOM_META": {TableName: ONT_NON_SENSITIVE + "custom_meta", Path: PATH_NON_SENSITIVE + "medco_custom_meta.csv"},
-		"MEDCO_ICD10_ICD9":  {TableName: ONT_NON_SENSITIVE + "icd10_icd9", Path: PATH_NON_SENSITIVE + "medco_icd10_icd9.csv"},
-		"MEDCO_I2B2":        {TableName: ONT_NON_SENSITIVE + "i2b2", Path: PATH_NON_SENSITIVE + "medco_i2b2.csv"},
-
-		"PATIENT_DIMENSION":         {TableName: I2B2DEMODATA_NON_SENSITIVE + "patient_dimension", Path: PATH_NON_SENSITIVE + "patient_dimension.csv"},
-		"VISIT_DIMENSION":           {TableName: I2B2DEMODATA_NON_SENSITIVE + "visit_dimension", Path: PATH_NON_SENSITIVE + "visit_dimension.csv"},
-		"CONCEPT_DIMENSION":         {TableName: I2B2DEMODATA_NON_SENSITIVE + "concept_dimension", Path: PATH_NON_SENSITIVE + "concept_dimension.csv"},
-		"OBSERVATION_FACT_FILTERED": {TableName: "", Path: PATH_NON_SENSITIVE + "observation_fact_filtered.csv"},
-		"OBSERVATION_FACT":          {TableName: I2B2DEMODATA_NON_SENSITIVE + "observation_fact", Path: PATH_NON_SENSITIVE + "observation_fact.csv"},
-	}
-
-	OutputFilesPathsSensitive = map[string]FileInfo{
-		"TABLE_ACCESS": {TableName: ONT_SENSITIVE + "table_access", Path: PATH_SENSITIVE + "table_access.csv"},
-
-		"SENSITIVE_TAGGED": {TableName: ONT_SENSITIVE + "sensitive_tagged", Path: PATH_SENSITIVE + "sensitive_tagged.csv"},
-
-		"MEDCO_BIRN":        {TableName: ONT_SENSITIVE + "birn", Path: PATH_SENSITIVE + "medco_birn.csv"},
-		"MEDCO_CUSTOM_META": {TableName: ONT_SENSITIVE + "custom_meta", Path: PATH_SENSITIVE + "medco_custom_meta.csv"},
-		"MEDCO_ICD10_ICD9":  {TableName: ONT_SENSITIVE + "icd10_icd9", Path: PATH_SENSITIVE + "medco_icd10_icd9.csv"},
-		"MEDCO_I2B2":        {TableName: ONT_SENSITIVE + "i2b2", Path: PATH_SENSITIVE + "medco_i2b2.csv"},
-
-		"PATIENT_DIMENSION_FILTERED":    {TableName: "", Path: PATH_SENSITIVE + "patient_dimension_filtered.csv"},
-		"PATIENT_DIMENSION":             {TableName: I2B2DEMODATA_SENSITIVE + "patient_dimension", Path: PATH_SENSITIVE + "patient_dimension.csv"},
-		"NEW_PATIENT_NUM":               {TableName: "", Path: PATH_SENSITIVE + "new_patient_num.csv"},
-		"CONCEPT_DIMENSION":             {TableName: I2B2DEMODATA_SENSITIVE + "concept_dimension", Path: PATH_SENSITIVE + "concept_dimension.csv"},
-		"OBSERVATION_FACT_FILTERED":     {TableName: "", Path: PATH_SENSITIVE + "observation_fact_filtered.csv"},
-		"OBSERVATION_FACT_WITH_DUMMIES": {TableName: "", Path: PATH_SENSITIVE + "observation_fact_with_dummies.csv"},
-		"OBSERVATION_FACT":              {TableName: I2B2DEMODATA_SENSITIVE + "observation_fact", Path: PATH_SENSITIVE + "observation_fact.csv"},
-
-		// not used, needed by the script generating the dummies
-		"PATIENT_DIMENSION_SCRIPT": {TableName: "", Path: PATH_SENSITIVE + "patient_dimension_script.csv"},
-	}
-
-	FileBashPathNonSensitive = "24-load-non-sensitive-i2b2-data.sh"
-	FileBashPathSensitive    = "24-load-sensitive-i2b2-data.sh"
-
-	FilePythonGenerateDummies = "../../import-tool/using_clustering.py"
-)
-
-const (
-	// Header is a generic XML header suitable for use with the output of Marshal.
-	// This is not automatically added to any output of this package,
-	// it is provided as a convenience.
-	Header = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` + "\n"
-)
-
 // MAIN function
-
-func generateOutputFilesNonSensitive(folderPath string) {
-	// fixed demodata tables
-	OutputFilesPathsNonSensitive["PATIENT_DIMENSION"] = FileInfo{TableName: I2B2DEMODATA_NON_SENSITIVE + "patient_dimension", Path: folderPath + "non_sensitive/patient_dimension.csv"}
-	OutputFilesPathsNonSensitive["VISIT_DIMENSION"] = FileInfo{TableName: I2B2DEMODATA_NON_SENSITIVE + "visit_dimension", Path: folderPath + "non_sensitive/visit_dimension.csv"}
-	OutputFilesPathsNonSensitive["CONCEPT_DIMENSION"] = FileInfo{TableName: I2B2DEMODATA_NON_SENSITIVE + "concept_dimension", Path: folderPath + "non_sensitive/concept_dimension.csv"}
-	OutputFilesPathsNonSensitive["OBSERVATION_FACT_FILTERED"] = FileInfo{TableName: "", Path: folderPath + "non_sensitive/observation_fact_filtered.csv"}
-	OutputFilesPathsNonSensitive["OBSERVATION_FACT"] = FileInfo{TableName: I2B2DEMODATA_NON_SENSITIVE + "observation_fact", Path: folderPath + "non_sensitive/observation_fact.csv"}
-
-	// fixed ontology tables
-	OutputFilesPathsNonSensitive["TABLE_ACCESS"] = FileInfo{TableName: ONT_NON_SENSITIVE + "table_access", Path: folderPath + "non_sensitive/table_access.csv"}
-
-	for key, path := range InputFilePaths {
-		if strings.HasPrefix(key, "ONTOLOGY_") {
-			rawKey := strings.Split(key, "ONTOLOGY_")[1]
-			tokens := strings.Split(path, "/")
-
-			OutputFilesPathsNonSensitive["LOCAL_"+rawKey] = FileInfo{TableName: I2B2METADATA_NON_SENSITIVE + strings.ToLower(rawKey), Path: folderPath + "non_sensitive/local_" + tokens[len(tokens)-1]}
-			OutputFilesPathsNonSensitive["MEDCO_"+rawKey] = FileInfo{TableName: ONT_NON_SENSITIVE + strings.ToLower(rawKey), Path: folderPath + "non_sensitive/medco_" + tokens[len(tokens)-1]}
-
-		}
-	}
-}
-
-func generateOutputFilesSensitive(folderPath string) {
-
-	// fixed demodata tables$
-	OutputFilesPathsSensitive["PATIENT_DIMENSION_FILTERED"] = FileInfo{TableName: "", Path: folderPath + "sensitive/patient_dimension_filtered.csv"}
-	OutputFilesPathsSensitive["PATIENT_DIMENSION"] = FileInfo{TableName: I2B2DEMODATA_SENSITIVE + "patient_dimension", Path: folderPath + "sensitive/patient_dimension.csv"}
-	OutputFilesPathsSensitive["NEW_PATIENT_NUM"] = FileInfo{TableName: "", Path: folderPath + "sensitive/new_patient_num.csv"}
-	OutputFilesPathsSensitive["CONCEPT_DIMENSION"] = FileInfo{TableName: I2B2DEMODATA_SENSITIVE + "concept_dimension", Path: folderPath + "sensitive/concept_dimension.csv"}
-	OutputFilesPathsSensitive["OBSERVATION_FACT_FILTERED"] = FileInfo{TableName: "", Path: folderPath + "sensitive/observation_fact_filtered.csv"}
-	OutputFilesPathsSensitive["OBSERVATION_FACT_WITH_DUMMIES"] = FileInfo{TableName: "", Path: folderPath + "sensitive/observation_fact_with_dummies.csv"}
-	OutputFilesPathsSensitive["OBSERVATION_FACT"] = FileInfo{TableName: I2B2DEMODATA_SENSITIVE + "observation_fact", Path: folderPath + "sensitive/observation_fact.csv"}
-
-	// fixed ontology tables
-	OutputFilesPathsSensitive["TABLE_ACCESS"] = FileInfo{TableName: ONT_SENSITIVE + "table_access", Path: folderPath + "sensitive/table_access.csv"}
-	OutputFilesPathsSensitive["SENSITIVE_TAGGED"] = FileInfo{TableName: ONT_SENSITIVE + "sensitive_tagged", Path: folderPath + "sensitive/sensitive_tagged.csv"}
-
-	for key, path := range InputFilePaths {
-		if strings.HasPrefix(key, "ONTOLOGY_") {
-			rawKey := strings.Split(key, "ONTOLOGY_")[1]
-			tokens := strings.Split(path, "/")
-
-			OutputFilesPathsSensitive["MEDCO_"+rawKey] = FileInfo{TableName: ONT_SENSITIVE + strings.ToLower(rawKey), Path: folderPath + "sensitive/medco_" + tokens[len(tokens)-1]}
-		}
-	}
-}
 
 // LoadI2B2Data it's the main function that performs a full conversion and loading of the I2B2 data
 func LoadI2B2Data(el *onet.Roster, entryPointIdx int, directory string, files Files, allSensitive bool, mapSensitive map[string]struct{}, i2b2DB loader.DBSettings, empty bool) error {
@@ -258,8 +212,8 @@ func LoadI2B2Data(el *onet.Roster, entryPointIdx int, directory string, files Fi
 	InputFilePaths["DUMMY_TO_PATIENT"] = directory + "/" + files.DummyToPatient
 
 	// change output filepaths
-	generateOutputFilesNonSensitive(directory + "/" + files.OutputFolder)
-	generateOutputFilesSensitive(directory + "/" + files.OutputFolder)
+	changeOutputFilesNonSensitive(directory + "/" + files.OutputFolder)
+	changeOutputFilesSensitive(directory + "/" + files.OutputFolder)
 
 	log.Lvl2("--- Started v1 Data Conversion ---")
 
@@ -288,6 +242,17 @@ func LoadI2B2Data(el *onet.Roster, entryPointIdx int, directory string, files Fi
 	}
 
 	log.Lvl2("--- Finished generating MEDCO_ONTOLOGY ---")
+
+	err = ParseModifierDimension()
+	if err != nil {
+		return err
+	}
+	err = ConvertModifierDimension()
+	if err != nil {
+		return err
+	}
+
+	log.Lvl2("--- Finished converting MODIFIER_DIMENSION ---")
 
 	err = ParseConceptDimension()
 	if err != nil {
@@ -402,6 +367,55 @@ func LoadI2B2Data(el *onet.Roster, entryPointIdx int, directory string, files Fi
 	return nil
 }
 
+func changeOutputFilesNonSensitive(folderPath string) {
+	// fixed demodata tables
+	OutputFilesPathsNonSensitive["PATIENT_DIMENSION"] = FileInfo{TableName: I2B2DEMODATA_NON_SENSITIVE + "patient_dimension", Path: folderPath + "non_sensitive/patient_dimension.csv"}
+	OutputFilesPathsNonSensitive["VISIT_DIMENSION"] = FileInfo{TableName: I2B2DEMODATA_NON_SENSITIVE + "visit_dimension", Path: folderPath + "non_sensitive/visit_dimension.csv"}
+	OutputFilesPathsNonSensitive["CONCEPT_DIMENSION"] = FileInfo{TableName: I2B2DEMODATA_NON_SENSITIVE + "concept_dimension", Path: folderPath + "non_sensitive/concept_dimension.csv"}
+	OutputFilesPathsNonSensitive["MODIFIER_DIMENSION"] = FileInfo{TableName: I2B2DEMODATA_NON_SENSITIVE + "modifier_dimension", Path: folderPath + "non_sensitive/modifier_dimension.csv"}
+	OutputFilesPathsNonSensitive["OBSERVATION_FACT_FILTERED"] = FileInfo{TableName: "", Path: folderPath + "non_sensitive/observation_fact_filtered.csv"}
+	OutputFilesPathsNonSensitive["OBSERVATION_FACT"] = FileInfo{TableName: I2B2DEMODATA_NON_SENSITIVE + "observation_fact", Path: folderPath + "non_sensitive/observation_fact.csv"}
+
+	// fixed ontology tables
+	OutputFilesPathsNonSensitive["TABLE_ACCESS"] = FileInfo{TableName: ONT_NON_SENSITIVE + "table_access", Path: folderPath + "non_sensitive/table_access.csv"}
+
+	for key, path := range InputFilePaths {
+		if strings.HasPrefix(key, "ONTOLOGY_") {
+			rawKey := strings.Split(key, "ONTOLOGY_")[1]
+			tokens := strings.Split(path, "/")
+
+			OutputFilesPathsNonSensitive["LOCAL_"+rawKey] = FileInfo{TableName: I2B2METADATA_NON_SENSITIVE + strings.ToLower(rawKey), Path: folderPath + "non_sensitive/local_" + tokens[len(tokens)-1]}
+			OutputFilesPathsNonSensitive["MEDCO_"+rawKey] = FileInfo{TableName: ONT_NON_SENSITIVE + strings.ToLower(rawKey), Path: folderPath + "non_sensitive/medco_" + tokens[len(tokens)-1]}
+
+		}
+	}
+}
+
+func changeOutputFilesSensitive(folderPath string) {
+
+	// fixed demodata tables$
+	OutputFilesPathsSensitive["PATIENT_DIMENSION_FILTERED"] = FileInfo{TableName: "", Path: folderPath + "sensitive/patient_dimension_filtered.csv"}
+	OutputFilesPathsSensitive["PATIENT_DIMENSION"] = FileInfo{TableName: I2B2DEMODATA_SENSITIVE + "patient_dimension", Path: folderPath + "sensitive/patient_dimension.csv"}
+	OutputFilesPathsSensitive["NEW_PATIENT_NUM"] = FileInfo{TableName: "", Path: folderPath + "sensitive/new_patient_num.csv"}
+	OutputFilesPathsSensitive["CONCEPT_DIMENSION"] = FileInfo{TableName: I2B2DEMODATA_SENSITIVE + "concept_dimension", Path: folderPath + "sensitive/concept_dimension.csv"}
+	OutputFilesPathsSensitive["OBSERVATION_FACT_FILTERED"] = FileInfo{TableName: "", Path: folderPath + "sensitive/observation_fact_filtered.csv"}
+	OutputFilesPathsSensitive["OBSERVATION_FACT_WITH_DUMMIES"] = FileInfo{TableName: "", Path: folderPath + "sensitive/observation_fact_with_dummies.csv"}
+	OutputFilesPathsSensitive["OBSERVATION_FACT"] = FileInfo{TableName: I2B2DEMODATA_SENSITIVE + "observation_fact", Path: folderPath + "sensitive/observation_fact.csv"}
+
+	// fixed ontology tables
+	OutputFilesPathsSensitive["TABLE_ACCESS"] = FileInfo{TableName: ONT_SENSITIVE + "table_access", Path: folderPath + "sensitive/table_access.csv"}
+	OutputFilesPathsSensitive["SENSITIVE_TAGGED"] = FileInfo{TableName: ONT_SENSITIVE + "sensitive_tagged", Path: folderPath + "sensitive/sensitive_tagged.csv"}
+
+	for key, path := range InputFilePaths {
+		if strings.HasPrefix(key, "ONTOLOGY_") {
+			rawKey := strings.Split(key, "ONTOLOGY_")[1]
+			tokens := strings.Split(path, "/")
+
+			OutputFilesPathsSensitive["MEDCO_"+rawKey] = FileInfo{TableName: ONT_SENSITIVE + strings.ToLower(rawKey), Path: folderPath + "sensitive/medco_" + tokens[len(tokens)-1]}
+		}
+	}
+}
+
 // GenerateLoadingDataScriptSensitive creates a load dataset .sql script for sensitive data (deletes the data in the corresponding tables and reloads the new 'protected' data)
 func GenerateLoadingDataScriptSensitive(i2b2DB loader.DBSettings) error {
 
@@ -463,11 +477,13 @@ func GenerateLoadingDataScriptNonSensitive(i2b2DB loader.DBSettings) error {
 	loading += "TRUNCATE TABLE " + I2B2DEMODATA_NON_SENSITIVE + "patient_mapping;\n" +
 		"TRUNCATE TABLE " + I2B2DEMODATA_NON_SENSITIVE + "encounter_mapping;\n" +
 		"TRUNCATE TABLE " + I2B2DEMODATA_NON_SENSITIVE + "concept_dimension;\n" +
+		"TRUNCATE TABLE " + I2B2DEMODATA_NON_SENSITIVE + "modifier_dimension;\n" +
 		"TRUNCATE TABLE " + I2B2DEMODATA_NON_SENSITIVE + "patient_dimension;\n" +
 		"TRUNCATE TABLE " + I2B2DEMODATA_NON_SENSITIVE + "visit_dimension;\n" +
 		"TRUNCATE TABLE " + I2B2DEMODATA_NON_SENSITIVE + "observation_fact;\n"
 
 	loading += `\copy ` + OutputFilesPathsNonSensitive["CONCEPT_DIMENSION"].TableName + ` FROM '` + OutputFilesPathsNonSensitive["CONCEPT_DIMENSION"].Path + `' ESCAPE '"' DELIMITER ',' CSV HEADER;` + "\n" +
+		`\copy ` + OutputFilesPathsNonSensitive["MODIFIER_DIMENSION"].TableName + ` FROM '` + OutputFilesPathsNonSensitive["MODIFIER_DIMENSION"].Path + `' ESCAPE '"' DELIMITER ',' CSV HEADER;` + "\n" +
 		`\copy ` + OutputFilesPathsNonSensitive["PATIENT_DIMENSION"].TableName + ` FROM '` + OutputFilesPathsNonSensitive["PATIENT_DIMENSION"].Path + `' ESCAPE '"' DELIMITER ',' CSV HEADER;` + "\n" +
 		`\copy ` + OutputFilesPathsNonSensitive["VISIT_DIMENSION"].TableName + ` FROM '` + OutputFilesPathsNonSensitive["VISIT_DIMENSION"].Path + `' ESCAPE '"' DELIMITER ',' CSV HEADER;` + "\n" +
 		`\copy ` + OutputFilesPathsNonSensitive["OBSERVATION_FACT"].TableName + ` FROM '` + OutputFilesPathsNonSensitive["OBSERVATION_FACT"].Path + `' ESCAPE '"' DELIMITER ',' CSV HEADER;` + "\n"
@@ -766,12 +782,20 @@ func UpdateChildrenEncryptIDs(name string) {
 // LOCAL ontology converter
 
 // ConvertLocalOntology reads and parses all local ontology tables and generates the corresponding .csv(s) (local, medco and adapter_mappings)
-func ConvertLocalOntology(group *onet.Roster, entryPointIdx int) error {
+func ConvertLocalOntology(group *onet.Roster, entryPointIdx int) (err error) {
 	// initialize container structs and counters
 	IDConcepts = 0
 	TagIDConceptsUsed = 0
 	TablesMedCoOntology = make(map[string]MedCoTableInfo)
 	MapConceptPathToTag = make(map[string]TagAndID)
+
+	if EnabledModifiers {
+		err = mapModifiersToAppliedPaths()
+		if err != nil {
+			return err
+		}
+		GeneratedConcepts = make(map[string][]*MedCoOntology)
+	}
 
 	for _, key := range OntologyFilesPaths {
 		rawName := strings.Split(key, "ONTOLOGY_")[1]
@@ -787,13 +811,65 @@ func ConvertLocalOntology(group *onet.Roster, entryPointIdx int) error {
 		}
 	}
 
-	err := ConvertSensitiveLocalTable()
+	err = ConvertSensitiveLocalTable()
 	if err != nil {
 		log.Fatal("Error converting [sensitive_tagged].csv")
 		return err
 	}
 
 	return nil
+}
+
+func mapModifiersToAppliedPaths() (err error) {
+
+	Modifiers = make(map[string]*modifiersMap)
+
+	for _, name := range OntologyFilesPaths {
+
+		lines, err := readCSV(InputFilePaths[name])
+		if err != nil {
+			log.Fatal("Error in readCSV()")
+			return err
+		}
+
+		HeaderLocalOntology = make([]string, 0)
+
+		for _, header := range lines[0] {
+			HeaderLocalOntology = append(HeaderLocalOntology, header)
+		}
+
+		plainCode := false
+		if HeaderLocalOntology[len(HeaderLocalOntology)-1] == "plain_code" {
+			plainCode = true
+		}
+
+		// the pcori_basecode
+		HeaderPatientDimension = append(HeaderPatientDimension, "pcori_basecode")
+
+		//skip header
+		for _, line := range lines[1:] {
+			lo := LocalOntologyFromString(line, plainCode)
+
+			if strings.ToLower(lo.FactTableColumn) == "modifier_cd" {
+
+				if Modifiers[lo.AppliedPath] == nil {
+					Modifiers[lo.AppliedPath] = new(modifiersMap)
+				}
+
+				if lo.ExclusionCD != "X" {
+					Modifiers[lo.AppliedPath].applied = append(Modifiers[lo.AppliedPath].applied, lo)
+				} else { //m_applied_path contains an exclusion path
+					if Modifiers[lo.AppliedPath].excluded == nil {
+						Modifiers[lo.AppliedPath].excluded = make(map[string]*LocalOntology, 0)
+					}
+					Modifiers[lo.AppliedPath].excluded[lo.Fullname] = lo
+				}
+			}
+		}
+	}
+
+	return
+
 }
 
 // ParseLocalTable reads and parses the xxxx.csv (part of the local ontology)
@@ -807,7 +883,7 @@ func ParseLocalTable(group *onet.Roster, entryPointIdx int, name string) error {
 	rawName := strings.Split(name, "ONTOLOGY_")[1]
 
 	HeaderLocalOntology = make([]string, 0)
-	TableLocalOntologyClear = make(map[string]*LocalOntology)
+	TableLocalOntologyClear = make(map[string][]*LocalOntology)
 
 	listConceptCD := make([]string, 0)
 	allSensitiveConceptIDs := make([]int64, 0)
@@ -874,45 +950,42 @@ func ParseLocalTable(group *onet.Roster, entryPointIdx int, name string) error {
 			// if it is sensitive or has a sensitive parent
 			if sensitive {
 
-				//TODO for now we remove all modifiers
-				if strings.ToLower(so.FactTableColumn) != "modifier_cd" {
-					so.NodeEncryptID = IDConcepts
+				// add the original concept to the concepts to parse
+				concepts := []*MedCoOntology{so}
 
-					if _, ok := TablesMedCoOntology[rawName]; ok {
-						TablesMedCoOntology[rawName].Sensitive[so.Fullname] = so
-					} else {
-						sensitive := make(map[string]*MedCoOntology)
-						clear := make(map[string]*MedCoOntology)
-						sensitive[so.Fullname] = so
-						TablesMedCoOntology[rawName] = MedCoTableInfo{Clear: clear, Sensitive: sensitive}
+				if EnabledModifiers {
+					generatedConcepts, err := generateConceptsFromModifiers(so)
+					if err != nil {
+						return err
 					}
-
-					// if the ID does not yet exist
-					if _, ok := MapConceptPathToTag[lo.Fullname]; !ok {
-						MapConceptPathToTag[lo.Fullname] = TagAndID{Tag: libunlynx.GroupingKey(-1), TagID: -1}
-						listConceptCD = append(listConceptCD, lo.Fullname)
-						allSensitiveConceptIDs = append(allSensitiveConceptIDs, IDConcepts)
-					}
-
-					IDConcepts++
+					concepts = append(concepts, generatedConcepts...)
+					GeneratedConcepts[so.Fullname] = generatedConcepts
 				}
+				parseLocalTableSensitive(rawName, concepts, &listConceptCD, &allSensitiveConceptIDs)
+
 			} else {
 
-				//TODO for now we remove all modifiers
-				if strings.ToLower(so.FactTableColumn) != "modifier_cd" {
-					// add a new entry to the local ontology table
-					TableLocalOntologyClear[lo.Fullname] = lo
-					// add a new entry to the medco ontology table
-					if _, ok := TablesMedCoOntology[rawName]; ok {
-						TablesMedCoOntology[rawName].Clear[so.Fullname] = so
-					} else {
-						sensitive := make(map[string]*MedCoOntology)
-						clear := make(map[string]*MedCoOntology)
-						clear[so.Fullname] = so
-						TablesMedCoOntology[rawName] = MedCoTableInfo{Clear: clear, Sensitive: sensitive}
+				if strings.ToLower(so.FactTableColumn) != "modifier_cd" || EnabledModifiers {
+
+					if strings.ToLower(so.FactTableColumn) == "modifier_cd" {
+						// if the modifier applies to sensitive concepts only, exclude it from the clear ontology
+						_, sensitive := HasSensitiveParents(strings.TrimSuffix(lo.AppliedPath, "%"))
+						if sensitive {
+							continue
+						}
 					}
 
-					TablesMedCoOntology[rawName].Clear[so.Fullname] = so
+					// add a new entry to the local ontology table
+					TableLocalOntologyClear[lo.Fullname] = append(TableLocalOntologyClear[lo.Fullname], lo)
+					// add a new entry to the medco ontology table
+					if _, ok := TablesMedCoOntology[rawName]; ok {
+						TablesMedCoOntology[rawName].Clear[so.Fullname] = append(TablesMedCoOntology[rawName].Clear[so.Fullname], so)
+					} else {
+						sensitive := make(map[string]*MedCoOntology)
+						clear := make(map[string][]*MedCoOntology)
+						clear[so.Fullname] = append(clear[so.Fullname], so)
+						TablesMedCoOntology[rawName] = MedCoTableInfo{Clear: clear, Sensitive: sensitive}
+					}
 				}
 			}
 		}
@@ -942,6 +1015,129 @@ func ParseLocalTable(group *onet.Roster, entryPointIdx int, name string) error {
 	}
 
 	return nil
+}
+
+// generateConceptsFromModifiers looks for the modifiers that apply to the so concept
+// and turn them into concepts by concatenating the modifiers' fullnames to the concept's
+func generateConceptsFromModifiers(so *MedCoOntology) (concepts []*MedCoOntology, err error) {
+
+	concepts = make([]*MedCoOntology, 0)
+
+	loModifiersAppliedTmp := make([]*LocalOntology, 0)
+	loModifiersApplied := make([]*LocalOntology, 0)
+	loModifiersExcluded := make(map[string]*LocalOntology, 0)
+
+	// look for the modifiers that apply only to the so concept (m_applied_path with no trailing %)
+	if m, ok := Modifiers[so.Fullname]; ok {
+		for _, ma := range m.applied {
+			loModifiersApplied = append(loModifiersAppliedTmp, ma)
+		}
+	}
+
+	// look for all the other modifiers
+	soFullname := so.Fullname
+	for soFullname != "" {
+		if m, ok := Modifiers[soFullname+"%"]; ok {
+			for _, ma := range m.applied {
+				loModifiersAppliedTmp = append(loModifiersAppliedTmp, ma)
+			}
+			for fullname, me := range m.excluded {
+				loModifiersExcluded[fullname] = me
+			}
+		}
+		soFullname = StripByLevel(soFullname, 1, false)
+	}
+
+	for _, loModifier := range loModifiersAppliedTmp {
+		// if loModifier is not in the excluded path for the so concept
+		if _, ok := loModifiersExcluded[loModifier.Fullname]; !ok {
+			loModifiersApplied = append(loModifiersApplied, loModifier)
+		}
+	}
+
+	// modify the modifiers' columns to turn them into concepts
+	for _, loModifier := range loModifiersApplied {
+
+		concept := MedCoOntologyFromLocalConcept(loModifier)
+
+		// sum the c_hlevels
+		conceptHLevel, err := strconv.Atoi(concept.HLevel)
+		if err != nil {
+			return nil, err
+		}
+		soHLevel, err := strconv.Atoi(so.HLevel)
+		if err != nil {
+			return nil, err
+		}
+		concept.HLevel = strconv.Itoa(conceptHLevel + soHLevel)
+
+		// concatenate the fullnames
+		concept.Fullname = strings.TrimSuffix(so.Fullname, "\\") + concept.Fullname
+
+		// concatenate the names
+		concept.Name = so.Name + "\\" + concept.Name
+
+		switch concept.VisualAttributes[0] {
+		// modifier container
+		case 'O':
+			concept.VisualAttributes = "C" + concept.VisualAttributes[1:]
+		// modifier folder
+		case 'D':
+			concept.VisualAttributes = "F" + concept.VisualAttributes[1:]
+		// modifier leaf
+		case 'R':
+			concept.VisualAttributes = "L" + concept.VisualAttributes[1:]
+		default:
+			return nil, fmt.Errorf("wrong visual attribute: %s", concept.VisualAttributes)
+		}
+
+		// concatenate basecodes
+		concept.BaseCode = so.BaseCode + "\\" + concept.BaseCode
+
+		concept.FactTableColumn = "concept_cd"
+		concept.Tablename = "concept_dimension"
+		concept.ColumnName = "concept_path"
+		concept.DimCode = concept.Fullname
+
+		// concatenate tooltips
+		concept.Tooltip = so.Tooltip + " \\ " + concept.Tooltip
+
+		concept.AppliedPath = "@"
+		concept.ExclusionCD = "\\N"
+
+		concepts = append(concepts, concept)
+	}
+
+	return
+}
+
+func parseLocalTableSensitive(rawName string, concepts []*MedCoOntology, listConceptCD *[]string, allSensitiveConceptIDs *[]int64) {
+
+	for _, so := range concepts {
+
+		so.NodeEncryptID = IDConcepts
+
+		if _, ok := TablesMedCoOntology[rawName]; ok {
+			TablesMedCoOntology[rawName].Sensitive[so.Fullname] = so
+		} else {
+			sensitive := make(map[string]*MedCoOntology)
+			clear := make(map[string][]*MedCoOntology)
+			sensitive[so.Fullname] = so
+			TablesMedCoOntology[rawName] = MedCoTableInfo{Clear: clear, Sensitive: sensitive}
+		}
+
+		// if the ID does not yet exist
+		if _, ok := MapConceptPathToTag[so.Fullname]; !ok {
+			MapConceptPathToTag[so.Fullname] = TagAndID{Tag: libunlynx.GroupingKey(-1), TagID: -1}
+			*listConceptCD = append(*listConceptCD, so.Fullname)
+			*allSensitiveConceptIDs = append(*allSensitiveConceptIDs, IDConcepts)
+		}
+
+		IDConcepts++
+	}
+
+	return
+
 }
 
 // EncryptAndTag encrypts the elements and tags them to allow for the future comparison
@@ -1000,8 +1196,10 @@ func ConvertClearLocalTable(rawName string) error {
 	csvClearOutputFile.WriteString(headerString[:len(headerString)-1] + "\n")
 
 	// non-sensitive
-	for _, lo := range TableLocalOntologyClear {
-		csvClearOutputFile.WriteString(lo.ToCSVText() + "\n")
+	for _, los := range TableLocalOntologyClear {
+		for _, lo := range los {
+			csvClearOutputFile.WriteString(lo.ToCSVText() + "\n")
+		}
 	}
 
 	return nil
@@ -1123,8 +1321,10 @@ func generateNewMedCoTableNonSensitive(rawName string) error {
 	// remove the last ,
 	csvOutputFile.WriteString(headerString[:len(headerString)-1] + "\n")
 
-	for _, so := range TablesMedCoOntology[rawName].Clear {
-		csvOutputFile.WriteString(so.ToCSVText() + "\n")
+	for _, sos := range TablesMedCoOntology[rawName].Clear {
+		for _, so := range sos {
+			csvOutputFile.WriteString(so.ToCSVText() + "\n")
+		}
 	}
 
 	return nil
@@ -1155,6 +1355,86 @@ func generateNewMedCoTableSensitive(rawName string) error {
 	return nil
 }
 
+// MODIFIER_DIMENSION.CSV converter
+
+// ParseModifierDimension reads and parses the modifier_dimension.csv.
+func ParseModifierDimension() error {
+	lines, err := readCSV(InputFilePaths["MODIFIER_DIMENSION"])
+	if err != nil {
+		log.Fatal("Error in readCSV()")
+		return err
+	}
+
+	TableModifierDimension = make(map[ModifierDimensionPK]*ModifierDimension)
+	HeaderModifierDimension = make([]string, 0)
+
+	/* structure of modifier_dimension.csv (in order):
+
+	// PK
+	"modifier_path",
+
+	// MANDATORY FIELDS
+	"modifier_cd",
+	"name_char",
+	"modifier_blob",
+
+	// ADMIN FIELDS
+	"update_date",
+	"download_date",
+	"import_date",
+	"sourcesystem_cd",
+	"upload_id"
+	*/
+
+	for _, header := range lines[0] {
+		HeaderModifierDimension = append(HeaderModifierDimension, header)
+	}
+
+	//skip header
+	for _, line := range lines[1:] {
+		mdk, md := ModifierDimensionFromString(line)
+		TableModifierDimension[mdk] = md
+	}
+
+	return nil
+
+}
+
+// ConvertModifierDimension converts the modifier_dimension.csv file
+// It has to be called before ParseConceptDimension()
+func ConvertModifierDimension() error {
+
+	csvOutputFileNonSensitive, err := os.Create(OutputFilesPathsNonSensitive["MODIFIER_DIMENSION"].Path)
+	if err != nil {
+		log.Fatal("Error opening [modifier_dimension].csv")
+		return err
+	}
+	defer csvOutputFileNonSensitive.Close()
+
+	headerString := ""
+	for _, header := range HeaderModifierDimension {
+		headerString += "\"" + header + "\","
+	}
+	// remove the last ,
+	csvOutputFileNonSensitive.WriteString(headerString[:len(headerString)-1] + "\n")
+
+	mdks := make([]string, 0, len(TableModifierDimension))
+	for mdk, _ := range TableModifierDimension {
+		mdks = append(mdks, mdk.ModifierPath)
+	}
+	sort.Strings(mdks)
+
+	for _, mdk := range mdks {
+		// if the modifier can be applied to non sensitive concepts
+		if _, ok := TableLocalOntologyClear[mdk]; ok {
+			md := TableModifierDimension[ModifierDimensionPK{ModifierPath: mdk}]
+			csvOutputFileNonSensitive.WriteString(md.ToCSVText() + "\n")
+		}
+	}
+
+	return nil
+}
+
 // CONCEPT_DIMENSION.CSV converter
 
 // ParseConceptDimension reads and parses the concept_dimension.csv.
@@ -1166,7 +1446,7 @@ func ParseConceptDimension() error {
 	}
 
 	ListConceptsToIgnore = make(map[string]struct{})
-	TableConceptDimension = make(map[*ConceptDimensionPK]ConceptDimension)
+	TableConceptDimension = make(map[ConceptDimensionPK]*ConceptDimension)
 	HeaderConceptDimension = make([]string, 0)
 	MapConceptCodeToTag = make(map[string]int64)
 
@@ -1198,10 +1478,32 @@ func ParseConceptDimension() error {
 		TableConceptDimension[cdk] = cd
 	}
 
+	if EnabledModifiers {
+		// add to the table the concepts generated from modifiers
+		for generatorConceptPath, generatedConcepts := range GeneratedConcepts {
+			cd, ok := TableConceptDimension[ConceptDimensionPK{ConceptPath: generatorConceptPath}]
+			if ok {
+				for _, generatedConcept := range generatedConcepts {
+					modifierPath := "\\" + strings.TrimPrefix(generatedConcept.Fullname, generatorConceptPath)
+					mdk := ModifierDimensionPK{ModifierPath: modifierPath}
+					md, ok := TableModifierDimension[mdk]
+					if ok {
+						newConcept := ModifierDimensionToConceptDimension(md)
+						newConcept.PK.ConceptPath = strings.TrimSuffix(cd.PK.ConceptPath, "\\") + newConcept.PK.ConceptPath
+						newConcept.ConceptCD = cd.ConceptCD + "\\" + newConcept.ConceptCD
+						newConcept.NameChar = cd.NameChar + "\\" + newConcept.NameChar
+						TableConceptDimension[ConceptDimensionPK{ConceptPath: generatedConcept.Fullname}] = newConcept
+					}
+				}
+			}
+		}
+	}
+
 	return nil
+
 }
 
-// ConvertConceptDimension converts the old concept_dimension.csv file
+// ConvertConceptDimension converts the concept_dimension.csv file
 func ConvertConceptDimension() error {
 
 	csvOutputFileNonSensitive, err := os.Create(OutputFilesPathsNonSensitive["CONCEPT_DIMENSION"].Path)
@@ -1245,9 +1547,12 @@ func ConvertConceptDimension() error {
 	return nil
 }
 
+// FilterOldObservationFact splits the observation_fact_old table in two tables
+// containing sensitive and non sensitive observations
 func FilterOldObservationFact() error {
 
 	PatientsWithSensitiveObs = make(map[PatientDimensionPK]struct{})
+	VisitsWithNonSensitiveObs = make(map[VisitDimensionPK]struct{})
 
 	lines, err := readCSV(InputFilePaths["OBSERVATION_FACT_OLD"])
 	if err != nil {
@@ -1262,9 +1567,6 @@ func FilterOldObservationFact() error {
 	}
 	defer csvOutputFileNonSensitive.Close()
 
-	writerNonSensitive := csv.NewWriter(csvOutputFileNonSensitive)
-	defer writerNonSensitive.Flush()
-
 	csvOutputFileSensitive, err := os.Create(OutputFilesPathsSensitive["OBSERVATION_FACT_FILTERED"].Path)
 	if err != nil {
 		log.Fatal("Error opening sensitive [OBSERVATION_FACT_FILTERED].csv")
@@ -1272,21 +1574,49 @@ func FilterOldObservationFact() error {
 	}
 	defer csvOutputFileSensitive.Close()
 
-	writerSensitive := csv.NewWriter(csvOutputFileSensitive)
-	defer writerSensitive.Flush()
+	for _, header := range lines[0] {
+		HeaderObservationFact = append(HeaderObservationFact, header)
+	}
 
-	writerNonSensitive.Write(lines[0])
-	writerSensitive.Write(lines[0])
+	headerString := ""
+	for _, header := range HeaderObservationFact {
+		headerString += "\"" + header + "\","
+	}
+
+	// remove the last ,
+	csvOutputFileNonSensitive.WriteString(headerString[:len(headerString)-1] + "\n")
+	csvOutputFileSensitive.WriteString(headerString[:len(headerString)-1] + "\n")
 
 	//skip header
 	for _, line := range lines[1:] {
-		ofk, _ := ObservationFactFromString(line)
-		//if the concept is sensitive
-		if _, ok := MapConceptCodeToTag[ofk.ConceptCD]; ok {
-			writerSensitive.Write(line)
-			PatientsWithSensitiveObs[PatientDimensionPK{ofk.PatientNum}] = struct{}{}
+		ofk, of := ObservationFactFromString(line)
+		if ofk.ModifierCD == "@" {
+			//if the concept is sensitive
+			if _, ok := MapConceptCodeToTag[ofk.ConceptCD]; ok {
+				csvOutputFileSensitive.WriteString(of.ToCSVText() + "\n")
+				PatientsWithSensitiveObs[PatientDimensionPK{ofk.PatientNum}] = struct{}{}
+			} else {
+				csvOutputFileNonSensitive.WriteString(of.ToCSVText() + "\n")
+				VisitsWithNonSensitiveObs[VisitDimensionPK{
+					EncounterNum: ofk.EncounterNum,
+					PatientNum:   ofk.PatientNum,
+				}] = struct{}{}
+			}
 		} else {
-			writerNonSensitive.Write(line)
+			conceptCD := ofk.ConceptCD + "\\" + ofk.ModifierCD
+			//if the concept is sensitive
+			if _, ok := MapConceptCodeToTag[conceptCD]; ok {
+				ofk.ConceptCD = conceptCD
+				ofk.ModifierCD = "@"
+				csvOutputFileSensitive.WriteString(of.ToCSVText() + "\n")
+				PatientsWithSensitiveObs[PatientDimensionPK{ofk.PatientNum}] = struct{}{}
+			} else {
+				csvOutputFileNonSensitive.WriteString(of.ToCSVText() + "\n")
+				VisitsWithNonSensitiveObs[VisitDimensionPK{
+					EncounterNum: ofk.EncounterNum,
+					PatientNum:   ofk.PatientNum,
+				}] = struct{}{}
+			}
 		}
 
 	}
@@ -1294,6 +1624,8 @@ func FilterOldObservationFact() error {
 	return nil
 }
 
+// FilterPatientDimension creates a table containing only the patients with sensitive observations.
+// This table is meant to be fed to the dummies generator script
 func FilterPatientDimension(pk kyber.Point) error {
 
 	lines, err := readCSV(InputFilePaths["PATIENT_DIMENSION"])
@@ -1333,13 +1665,13 @@ func FilterPatientDimension(pk kyber.Point) error {
 
 }
 
+// CallGenerateDummiesScript calls the python script generating the dummies
 func CallGenerateDummiesScript() error {
 	return loader.ExecuteScript("python",
 		FilePythonGenerateDummies,
 		OutputFilesPathsSensitive["OBSERVATION_FACT_FILTERED"].Path,
 		OutputFilesPathsSensitive["PATIENT_DIMENSION_FILTERED"].Path,
 		OutputFilesPathsSensitive["OBSERVATION_FACT_WITH_DUMMIES"].Path,
-		// we don't use this output file
 		OutputFilesPathsSensitive["PATIENT_DIMENSION_SCRIPT"].Path,
 		InputFilePaths["DUMMY_TO_PATIENT"],
 	)
@@ -1355,7 +1687,7 @@ func ParsePatientDimension(pk kyber.Point) error {
 		return err
 	}
 
-	TablePatientDimension = make(map[PatientDimensionPK]PatientDimension)
+	TablePatientDimension = make(map[PatientDimensionPK]*PatientDimension)
 	HeaderPatientDimension = make([]string, 0)
 	MapNewPatientNum = make(map[string]string)
 
@@ -1438,14 +1770,13 @@ func ConvertPatientDimension(pk kyber.Point) error {
 	csvOutputFileNonSensitive.WriteString(headerString[:len(headerString)-1] + "\n")
 
 	i := 0
-	var tmp PatientDimensionPK
-	for _, pd := range TablePatientDimension {
-		tmp = pd.PK
+	for _, pdp := range TablePatientDimension {
+		pd := *pdp
 		MapNewPatientNum[pd.PK.PatientNum] = strconv.FormatInt(int64(perm[i]), 10)
 		pd.PK.PatientNum = strconv.FormatInt(int64(perm[i]), 10)
 		csvOutputFileNonSensitive.WriteString(pd.ToCSVText(false) + "\n")
 		// if the patient has sensitive observations, we also put him in the sensitive project
-		if _, ok := PatientsWithSensitiveObs[tmp]; ok {
+		if _, ok := PatientsWithSensitiveObs[pdp.PK]; ok {
 			csvOutputFileSensitive.WriteString(pd.ToCSVText(true) + "\n")
 		}
 		i++
@@ -1455,7 +1786,7 @@ func ConvertPatientDimension(pk kyber.Point) error {
 	for dummyNum, patientNum := range TableDummyToPatient {
 		MapNewPatientNum[dummyNum] = strconv.FormatInt(int64(perm[i]), 10)
 
-		patient := TablePatientDimension[PatientDimensionPK{PatientNum: patientNum}]
+		patient := *TablePatientDimension[PatientDimensionPK{PatientNum: patientNum}]
 		patient.PK.PatientNum = strconv.FormatInt(int64(perm[i]), 10)
 		ef := libunlynx.EncryptInt(pk, 0)
 		patient.EncryptedFlag = *ef
@@ -1491,7 +1822,7 @@ func ParseVisitDimension() error {
 		return err
 	}
 
-	TableVisitDimension = make(map[VisitDimensionPK]VisitDimension)
+	TableVisitDimension = make(map[VisitDimensionPK]*VisitDimension)
 	HeaderVisitDimension = make([]string, 0)
 	MapNewEncounterNum = make(map[VisitDimensionPK]VisitDimensionPK)
 	MapPatientVisits = make(map[string][]string)
@@ -1578,12 +1909,15 @@ func ConvertVisitDimension() error {
 	csvOutputFile.WriteString(headerString[:len(headerString)-1] + "\n")
 
 	i := 0
-	for _, vd := range TableVisitDimension {
-		MapNewEncounterNum[VisitDimensionPK{EncounterNum: vd.PK.EncounterNum, PatientNum: vd.PK.PatientNum}] = VisitDimensionPK{EncounterNum: strconv.FormatInt(int64(perm[i]), 10), PatientNum: MapNewPatientNum[vd.PK.PatientNum]}
-		vd.PK.EncounterNum = strconv.FormatInt(int64(perm[i]), 10)
-		vd.PK.PatientNum = MapNewPatientNum[vd.PK.PatientNum]
-		csvOutputFile.WriteString(vd.ToCSVText(false) + "\n")
-		i++
+	for vdk, vdp := range TableVisitDimension {
+		if _, ok := VisitsWithNonSensitiveObs[vdk]; ok {
+			vd := *vdp
+			MapNewEncounterNum[vdk] = VisitDimensionPK{EncounterNum: strconv.FormatInt(int64(perm[i]), 10), PatientNum: MapNewPatientNum[vd.PK.PatientNum]}
+			vd.PK.EncounterNum = strconv.FormatInt(int64(perm[i]), 10)
+			vd.PK.PatientNum = MapNewPatientNum[vd.PK.PatientNum]
+			csvOutputFile.WriteString(vd.ToCSVText(false) + "\n")
+			i++
+		}
 	}
 
 	return nil
