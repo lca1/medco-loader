@@ -16,6 +16,14 @@ var publicKey kyber.Point
 var el *onet.Roster
 var local *onet.LocalTest
 
+func init() {
+	log.SetDebugVisible(2)
+	setupEncryptEnv()
+	Testing = true
+	EnabledModifiers = true
+	AllSensitive = false
+}
+
 func getRoster(groupFilePath string) (*onet.Roster, *onet.LocalTest, error) {
 	// empty string: make localtest
 	if len(groupFilePath) == 0 {
@@ -60,23 +68,90 @@ func setupEncryptEnv() {
 }
 
 func TestConvertTableAccess(t *testing.T) {
-	log.SetDebugVisible(2)
 
 	assert.Nil(t, ParseTableAccess())
 	assert.Nil(t, ConvertTableAccess())
+
+}
+
+func TestConvertOntology(t *testing.T) {
+
+	ListSensitiveConcepts = make(map[string]struct{})
+	ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Benign neoplasms (210-229)\(216) Benign neoplasm of skin\`] = struct{}{}
+
+	assert.Nil(t, ConvertLocalOntology(el, 0))
+	assert.Nil(t, GenerateMedCoOntology())
+
+}
+
+func TestConvertOntologyWithExcludedConcepts(t *testing.T) {
+
+	// testing modifiers with m_exclusion_cd = "X"
+	ListSensitiveConcepts = make(map[string]struct{})
+	ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Malignant neoplasms (140-208)\`] = struct{}{}
+
+	assert.Nil(t, ConvertLocalOntology(el, 0))
+	assert.Nil(t, GenerateMedCoOntology())
+
+	local.CloseAll()
+}
+
+func TestConvertModifierDimension(t *testing.T) {
+
+	TestConvertOntology(t)
+
+	assert.Nil(t, ParseModifierDimension())
+	assert.Nil(t, ConvertModifierDimension())
+
+}
+
+func TestConvertConceptDimension(t *testing.T) {
+
+	if EnabledModifiers {
+		TestConvertModifierDimension(t)
+	} else {
+		TestConvertOntology(t)
+	}
+
+	assert.Nil(t, ParseConceptDimension())
+	assert.Nil(t, ConvertConceptDimension())
+
+}
+
+func TestFilterOldObservationFact(t *testing.T) {
+
+	if ListSensitiveConcepts == nil {
+		ListSensitiveConcepts = make(map[string]struct{})
+		ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Benign neoplasms (210-229)\(216) Benign neoplasm of skin\`] = struct{}{}
+	}
+
+	assert.Nil(t, FilterOldObservationFact())
+
+}
+
+func TestFilterPatientDimension(t *testing.T) {
+
+	TestFilterOldObservationFact(t)
+
+	assert.Nil(t, FilterPatientDimension(publicKey))
+
+}
+
+func TestCallGenerateDummiesScript(t *testing.T) {
+
+	assert.Nil(t, CallGenerateDummiesScript())
+
 }
 
 func TestParseDummyToPatient(t *testing.T) {
-	log.SetDebugVisible(2)
 
 	assert.Nil(t, ParseDummyToPatient())
+
 }
 
 func TestConvertPatientDimension(t *testing.T) {
-	log.SetDebugVisible(2)
-	setupEncryptEnv()
 
-	ParseDummyToPatient()
+	TestParseDummyToPatient(t)
 
 	assert.Nil(t, ParsePatientDimension(publicKey))
 	assert.Nil(t, ConvertPatientDimension(publicKey))
@@ -85,13 +160,12 @@ func TestConvertPatientDimension(t *testing.T) {
 }
 
 func TestConvertVisitDimension(t *testing.T) {
-	log.SetDebugVisible(2)
-	setupEncryptEnv()
 
-	ParseDummyToPatient()
+	TestFilterOldObservationFact(t)
 
-	ParsePatientDimension(publicKey)
-	ConvertPatientDimension(publicKey)
+	assert.Nil(t, ParseDummyToPatient())
+	assert.Nil(t, ParsePatientDimension(publicKey))
+	assert.Nil(t, ConvertPatientDimension(publicKey))
 
 	assert.Nil(t, ParseVisitDimension())
 	assert.Nil(t, ConvertVisitDimension())
@@ -156,70 +230,10 @@ func TestStripByLevel(t *testing.T) {
 	assert.Equal(t, "", result)
 }
 
-func TestConvertOntology(t *testing.T) {
-	log.SetDebugVisible(2)
-	setupEncryptEnv()
-	Testing = true
-	EnabledModifiers = true
-
-	ListSensitiveConcepts = make(map[string]struct{})
-	ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Benign neoplasms (210-229)\(216) Benign neoplasm of skin\`] = struct{}{}
-
-	assert.Nil(t, ConvertLocalOntology(el, 0))
-	assert.Nil(t, GenerateMedCoOntology())
-
-	local.CloseAll()
-}
-
-func TestConvertOntology2(t *testing.T) {
-	log.SetDebugVisible(2)
-	setupEncryptEnv()
-	Testing = true
-	EnabledModifiers = true
-
-	// testing modifiers with m_exclusion_cd = "X"
-	ListSensitiveConcepts = make(map[string]struct{})
-	ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Malignant neoplasms (140-208)\`] = struct{}{}
-
-	assert.Nil(t, ConvertLocalOntology(el, 0))
-	assert.Nil(t, GenerateMedCoOntology())
-
-	local.CloseAll()
-}
-
-func TestConvertConceptDimension(t *testing.T) {
-	log.SetDebugVisible(2)
-	setupEncryptEnv()
-	Testing = true
-	EnabledModifiers = true
-
-	ListSensitiveConcepts = make(map[string]struct{})
-	ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Benign neoplasms (210-229)\(216) Benign neoplasm of skin\`] = struct{}{}
-
-	assert.Nil(t, ConvertLocalOntology(el, 0))
-	assert.Nil(t, GenerateMedCoOntology())
-
-	if EnabledModifiers {
-		assert.Nil(t, ParseModifierDimension())
-		assert.Nil(t, ConvertModifierDimension())
-	}
-
-	assert.Nil(t, ParseConceptDimension())
-	assert.Nil(t, ConvertConceptDimension())
-
-	local.CloseAll()
-
-}
-
 func TestConvertAll(t *testing.T) {
-	log.SetDebugVisible(2)
-	setupEncryptEnv()
-	Testing = true
-	AllSensitive = false
-	EnabledModifiers = true
 
 	ListSensitiveConcepts = make(map[string]struct{})
-	ListSensitiveConcepts[`\i2b2\Diagnoses\`] = struct{}{}
+	ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Benign neoplasms (210-229)\(216) Benign neoplasm of skin\`] = struct{}{}
 
 	assert.Nil(t, ConvertLocalOntology(el, 0))
 

@@ -1321,7 +1321,14 @@ func generateNewMedCoTableNonSensitive(rawName string) error {
 	// remove the last ,
 	csvOutputFile.WriteString(headerString[:len(headerString)-1] + "\n")
 
-	for _, sos := range TablesMedCoOntology[rawName].Clear {
+	keys := make([]string, 0, len(TablesMedCoOntology[rawName].Clear))
+	for key, _ := range TablesMedCoOntology[rawName].Clear {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		sos := TablesMedCoOntology[rawName].Clear[key]
 		for _, so := range sos {
 			csvOutputFile.WriteString(so.ToCSVText() + "\n")
 		}
@@ -1347,8 +1354,14 @@ func generateNewMedCoTableSensitive(rawName string) error {
 
 	UpdateChildrenEncryptIDs(rawName) //updates the ChildrenEncryptIDs of the internal and parent nodes
 
-	// copy the sensitive concept codes to the new csv files (it does not include the modifier concepts)
-	for _, so := range TablesMedCoOntology[rawName].Sensitive {
+	keys := make([]string, 0, len(TablesMedCoOntology[rawName].Sensitive))
+	for key, _ := range TablesMedCoOntology[rawName].Sensitive {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		so := TablesMedCoOntology[rawName].Sensitive[key]
 		csvOutputFile.WriteString(so.ToCSVText() + "\n")
 	}
 
@@ -1527,7 +1540,14 @@ func ConvertConceptDimension() error {
 	csvOutputFileNonSensitive.WriteString(headerString[:len(headerString)-1] + "\n")
 	csvOutputFileSensitive.WriteString(headerString[:len(headerString)-1] + "\n")
 
-	for _, cd := range TableConceptDimension {
+	cdks := make([]string, 0, len(TableConceptDimension))
+	for cdk, _ := range TableConceptDimension {
+		cdks = append(cdks, cdk.ConceptPath)
+	}
+	sort.Strings(cdks)
+
+	for _, cdk := range cdks {
+		cd := TableConceptDimension[ConceptDimensionPK{ConceptPath: cdk}]
 		// if the concept is non-sensitive -> keep it as it is
 		if _, ok := TableLocalOntologyClear[cd.PK.ConceptPath]; ok {
 			csvOutputFileNonSensitive.WriteString(cd.ToCSVText() + "\n")
