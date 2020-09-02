@@ -35,7 +35,7 @@ clustering_wrapper.perform_HAC_linkage('jaccard', 'average')
 
 # performing k-means and adapting the minimum anonymity set requirements
 # need to specify the maximum ratio, the minimum allowed anonymity set and the number of clusters
-clustering_wrapper.perform_clustering(max_ratio=10, min_anonymity_set_allowed=100, n_clusters=2)
+clustering_wrapper.perform_clustering(max_ratio=20, min_anonymity_set_allowed=1000, n_clusters=2)
 
 print("Finished hierarchical clustering.")
 

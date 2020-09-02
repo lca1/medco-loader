@@ -59,12 +59,12 @@ def check_duplicate_single_cluster(patient_concepts_matrix_cluster, x_cluster):
         return True
         
     return False
-        
+
 def fix_dummy_duplicate(histogram, dummy_patient, clusters_labels, patient_concepts_matrix):
     #print("FIXING DUMMY PATIENT! ***************** : ", dummy_patient.name)
     labels = clusters_labels.unique().copy()
     random.shuffle(labels)
-    
+
     # considering only the patients with the same weight as the dummy
     filtered_patient_concepts_matrix = patient_concepts_matrix[patient_concepts_matrix.sum(1) == dummy_patient.sum()]
     
@@ -75,12 +75,13 @@ def fix_dummy_duplicate(histogram, dummy_patient, clusters_labels, patient_conce
         patient_cluster = dummy_patient[current_cluster.index].copy()
         
         # takes histogram values and sort them
-        codes_set_to_1 = current_cluster[patient_cluster == 1].sort_values(ascending=False)
-        codes_set_to_0 = current_cluster[patient_cluster == 0].sort_values(ascending=True)
+        codes_set_to_1 = current_cluster[patient_cluster == 1].sort_values(ascending=False).index
+        codes_set_to_0 = current_cluster[patient_cluster == 0].sort_values(ascending=True).index
         
         if (codes_set_to_1.shape[0] == 0 or codes_set_to_0.shape[0] == 0):
-            raise ValueError("The patient that was replicated for dummy generation has a cluster with all the codes or a cluster with no code. Perform the clustering again with a greater minimum anonymity set")
-        
+            #raise ValueError("The patient that was replicated for dummy generation has a cluster with all the codes or a cluster with no code. Perform the clustering again with a greater minimum anonymity set")
+            continue
+
         iterations = 0
         # try to slightly change the dummy patient
         for c_1 in codes_set_to_1:
@@ -90,8 +91,9 @@ def fix_dummy_duplicate(histogram, dummy_patient, clusters_labels, patient_conce
                 x[c_0] = 1
 
                 if (iterations > 200):
-                    raise ValueError("Too many iterations for fixing the dummy ...")
-                
+                    #raise ValueError("Too many iterations for fixing the dummy ...")
+                    break
+
                 # the matrix could (and probably should) be reduced before the check!
                 duplicate = check_duplicate_single_cluster(filtered_patient_concepts_matrix[clusters_labels[clusters_labels == label].index], x[clusters_labels[clusters_labels == label].index])
                 
@@ -101,11 +103,11 @@ def fix_dummy_duplicate(histogram, dummy_patient, clusters_labels, patient_conce
                     break
                 iterations = iterations + 1
                 
-            if not duplicate:
+            if (not duplicate or iterations > 200):
                 # good, let's keep this dummy
                 break
-        if (duplicate):
-            raise ValueError("This is a duplicate patient. Try to increase the anonymity set")
+        #if (duplicate):
+            #raise ValueError("This is a duplicate patient. Try to increase the anonymity set")
         
         dummy_patient[x.index] = x
 
@@ -137,7 +139,7 @@ def perform_shuffle(patient_row, clustered_histogram, histogram_dummies, cluster
         else:
             # always include all the codes that need occurrences
             # also include the codes that already have reached the need number of occurrences (but take the ones that appear less often)
-            k_indices = current_cluster.values.argpartition(k)
+            k_indices = current_cluster.values.argpartition(k - 1)
             k_min_codes = current_cluster[k_indices[:k]].index
 
             patient_cluster[patient_cluster.index] = 0
@@ -166,10 +168,10 @@ def add_dummy_patient(clusters_labels, clustered_histogram, histogram_with_dummi
 
     if (number_codes_needing_patients == 0):
         return patient_concepts_matrix, mapping
-    
+
     #patient = get_patient(patient_concepts_matrix, number_codes_needing_patients, filled_cluster, last)
     patient = get_patient(patient_concepts_matrix, number_codes_needing_patients, filled_cluster, last, submatrix)
-    
+
     new_row = perform_shuffle(patient_concepts_matrix.loc[patient], clustered_histogram, histogram_with_dummies, clusters_labels)
     new_row.name = str(int(last) + dummy_n)
 
@@ -180,15 +182,18 @@ def add_dummy_patient(clusters_labels, clustered_histogram, histogram_with_dummi
 
 """
     This method adds the dummy patient (new_row) to the patient_concepts matrix.
-    During the process, it checks whether the new generated row is duplicated. In that case, it tries to fix it
+    It does not check whether the new generated row is duplicated.
 """
 def add_dummy_to_patient_concepts(patient_concepts_matrix, new_row, histogram, clusters_labels):
     # perform checks on this new_row, in order to see if it is equal to any existing patient
     # in case: fix it
-    if(check_duplicate_all_clusters(patient_concepts_matrix, new_row, clusters_labels)):
-        fixed_dummy = fix_dummy_duplicate(histogram, new_row, clusters_labels, patient_concepts_matrix)
-    else:
-        fixed_dummy = new_row
+
+    fixed_dummy = new_row
+
+    #if(check_duplicate_all_clusters(patient_concepts_matrix, new_row, clusters_labels)):
+    #    fixed_dummy = fix_dummy_duplicate(histogram, new_row, clusters_labels, patient_concepts_matrix)
+    #else:
+    #    fixed_dummy = new_row
         
     df = pd.DataFrame(fixed_dummy).T
     patient_concepts_matrix = patient_concepts_matrix.append(df)
@@ -202,7 +207,7 @@ def add_dummy_to_patient_concepts(patient_concepts_matrix, new_row, histogram, c
 def duplicate_patients(patient_concepts_matrix, clusters_labels, dummy_n, mapping, last):
     histogram = patient_concepts_matrix.sum(0)
     clustered_histogram, histogram_with_dummies = utils.build_clustered_histograms(histogram, clusters_labels)
-    
+
     for patient in patient_concepts_matrix.index:
         histogram = patient_concepts_matrix.sum(0)
         new_row = perform_shuffle(patient_concepts_matrix.loc[patient], histogram, histogram_with_dummies, clusters_labels)
