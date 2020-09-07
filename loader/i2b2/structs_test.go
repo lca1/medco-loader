@@ -13,283 +13,283 @@ import (
 // ----------------------------------------------------------------------------------------------------------- //
 
 func TestTableAccess_ToCSVText(t *testing.T) {
-	ta := TableAccess{
-		TableCD:          "BIRN",
-		TableName:        "BIRN",
-		ProtectedAccess:  "N",
-		Hlevel:           "0",
-		Fullname:         "\\BIRN\\",
-		Name:             "Clinical Trials",
-		SynonymCD:        "N",
-		VisualAttributes: "CA ",
-		TotalNum:         "",
-		BaseCode:         "",
-		MetadataXML:      "",
-		FactTableColumn:  "concept_cd",
-		DimTableName:     "concept_dimension",
-		ColumnName:       "concept_path",
-		ColumnDataType:   "T",
-		Operator:         "LIKE",
-		DimCode:          "\\BIRN\\",
-		Comment:          "",
-		Tooltip:          "Clinical Trials",
-		EntryData:        "",
-		ChangeData:       "",
-		StatusCD:         "",
-		ValueType:        "",
+	ta := tableAccessRecord{
+		tableCD:          "BIRN",
+		tableName:        "BIRN",
+		protectedAccess:  "N",
+		hlevel:           "0",
+		fullname:         "\\BIRN\\",
+		name:             "Clinical Trials",
+		synonymCD:        "N",
+		visualAttributes: "CA ",
+		totalNum:         "",
+		baseCode:         "",
+		metadataXML:      "",
+		factTableColumn:  "concept_cd",
+		dimTableName:     "concept_dimension",
+		columnName:       "concept_path",
+		columnDataType:   "T",
+		operator:         "LIKE",
+		dimCode:          "\\BIRN\\",
+		comment:          "",
+		tooltip:          "Clinical Trials",
+		entryData:        "",
+		changeData:       "",
+		statusCD:         "",
+		valueType:        "",
 	}
 
-	assert.Equal(t, ta.ToCSVText(), `"BIRN","BIRN","N","0","\BIRN\","Clinical Trials","N","CA ","","","","concept_cd","concept_dimension","concept_path","T","LIKE","\BIRN\","","Clinical Trials","","","",""`)
+	assert.Equal(t, ta.toCSVText(), `"BIRN","BIRN","N","0","\BIRN\","Clinical Trials","N","CA ","","","","concept_cd","concept_dimension","concept_path","T","LIKE","\BIRN\","","Clinical Trials","","","",""`)
 }
 
 func TestMedCoOntology_ToCSVText(t *testing.T) {
 
-	ac := AdministrativeColumns{
-		UpdateDate:     "\\N",
-		DownloadDate:   "\\N",
-		ImportDate:     "\\N",
-		SourceSystemCD: "SHRINE",
+	ac := administrativeColumns{
+		updateDate:     "\\N",
+		downloadDate:   "\\N",
+		importDate:     "\\N",
+		sourceSystemCD: "SHRINE",
 	}
 
-	so := MedCoOntology{
-		NodeEncryptID:      -1,
-		ChildrenEncryptIDs: nil,
+	so := medCoOntologyRecord{
+		nodeEncryptID:      -1,
+		childrenEncryptIDs: nil,
 
-		HLevel:           "0",
-		Fullname:         "\\SHRINE\\",
-		Name:             "SHRINE",
-		SynonymCD:        "N",
-		VisualAttributes: "CA ",
-		TotalNum:         "\\N",
-		BaseCode:         "\\N",
-		MetadataXML:      "",
-		FactTableColumn:  "concept_cd",
-		Tablename:        "concept_dimension",
-		ColumnName:       "concept_path",
-		ColumnDataType:   "T",
-		Operator:         "LIKE",
-		DimCode:          "\\SHRINE\\",
-		Comment:          "",
-		Tooltip:          "\\N",
-		AdminColumns:     ac,
-		ValueTypeCD:      "\\N",
-		AppliedPath:      "@",
-		ExclusionCD:      "\\N",
+		hLevel:           "0",
+		fullname:         "\\SHRINE\\",
+		name:             "SHRINE",
+		synonymCD:        "N",
+		visualAttributes: "CA ",
+		totalNum:         "\\N",
+		baseCode:         "\\N",
+		metadataXML:      "",
+		factTableColumn:  "concept_cd",
+		tablename:        "concept_dimension",
+		columnName:       "concept_path",
+		columnDataType:   "T",
+		operator:         "LIKE",
+		dimCode:          "\\SHRINE\\",
+		comment:          "",
+		tooltip:          "\\N",
+		adminColumns:     ac,
+		valueTypeCD:      "\\N",
+		appliedPath:      "@",
+		exclusionCD:      "\\N",
 	}
-	assert.Equal(t, so.ToCSVText(), `"0","\SHRINE\","SHRINE","N","CA ",,,"","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
+	assert.Equal(t, so.toCSVText(), `"0","\SHRINE\","SHRINE","N","CA ",,,"","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
 
-	so.NodeEncryptID = 1
-	assert.Equal(t, so.ToCSVText(), `"0","\SHRINE\","SHRINE","N","CA ",,,"<?xml version=""1.0""?><ValueMetadata><Version>MedCo-0.1</Version><EncryptedType>CONCEPT_PARENT_NODE</EncryptedType></ValueMetadata>","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
+	so.nodeEncryptID = 1
+	assert.Equal(t, so.toCSVText(), `"0","\SHRINE\","SHRINE","N","CA ",,,"<?xml version=""1.0""?><ValueMetadata><Version>MedCo-0.1</Version><EncryptedType>CONCEPT_PARENT_NODE</EncryptedType></ValueMetadata>","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
 
-	so.VisualAttributes = "LA "
-	assert.Equal(t, so.ToCSVText(), `"0","\SHRINE\","SHRINE","N","LA ",,,"<?xml version=""1.0""?><ValueMetadata><Version>MedCo-0.1</Version><EncryptedType>CONCEPT_LEAF</EncryptedType><NodeEncryptID>1</NodeEncryptID></ValueMetadata>","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
+	so.visualAttributes = "LA "
+	assert.Equal(t, so.toCSVText(), `"0","\SHRINE\","SHRINE","N","LA ",,,"<?xml version=""1.0""?><ValueMetadata><Version>MedCo-0.1</Version><EncryptedType>CONCEPT_LEAF</EncryptedType><NodeEncryptID>1</NodeEncryptID></ValueMetadata>","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
 
-	so.ChildrenEncryptIDs = append(so.ChildrenEncryptIDs, 2)
-	so.ChildrenEncryptIDs = append(so.ChildrenEncryptIDs, 3)
-	assert.Equal(t, so.ToCSVText(), `"0","\SHRINE\","SHRINE","N","LA ",,,"<?xml version=""1.0""?><ValueMetadata><Version>MedCo-0.1</Version><EncryptedType>CONCEPT_LEAF</EncryptedType><NodeEncryptID>1</NodeEncryptID></ValueMetadata>","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
+	so.childrenEncryptIDs = append(so.childrenEncryptIDs, 2)
+	so.childrenEncryptIDs = append(so.childrenEncryptIDs, 3)
+	assert.Equal(t, so.toCSVText(), `"0","\SHRINE\","SHRINE","N","LA ",,,"<?xml version=""1.0""?><ValueMetadata><Version>MedCo-0.1</Version><EncryptedType>CONCEPT_LEAF</EncryptedType><NodeEncryptID>1</NodeEncryptID></ValueMetadata>","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
 
-	so.VisualAttributes = "FA "
-	assert.Equal(t, so.ToCSVText(), `"0","\SHRINE\","SHRINE","N","FA ",,,"<?xml version=""1.0""?><ValueMetadata><Version>MedCo-0.1</Version><EncryptedType>CONCEPT_INTERNAL_NODE</EncryptedType><NodeEncryptID>1</NodeEncryptID><ChildrenEncryptIDs>"2;3"</ChildrenEncryptIDs></ValueMetadata>","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
+	so.visualAttributes = "FA "
+	assert.Equal(t, so.toCSVText(), `"0","\SHRINE\","SHRINE","N","FA ",,,"<?xml version=""1.0""?><ValueMetadata><Version>MedCo-0.1</Version><EncryptedType>CONCEPT_INTERNAL_NODE</EncryptedType><NodeEncryptID>1</NodeEncryptID><ChildrenEncryptIDs>"2;3"</ChildrenEncryptIDs></ValueMetadata>","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
 
-	so.VisualAttributes = "M "
-	assert.Equal(t, so.ToCSVText(), `"0","\SHRINE\","SHRINE","N","M ",,,"","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
+	so.visualAttributes = "M "
+	assert.Equal(t, so.toCSVText(), `"0","\SHRINE\","SHRINE","N","M ",,,"","concept_cd","concept_dimension","concept_path","T","LIKE","\SHRINE\","",,,,,"SHRINE",,"@",`)
 
 }
 
 func TestLocalOntology_ToCSVText(t *testing.T) {
 
-	ac := AdministrativeColumns{
-		UpdateDate:     "2007-04-10 00:00:00",
-		DownloadDate:   "2007-04-10 00:00:00",
-		ImportDate:     "2007-04-10 00:00:00",
-		SourceSystemCD: "DEMO",
+	ac := administrativeColumns{
+		updateDate:     "2007-04-10 00:00:00",
+		downloadDate:   "2007-04-10 00:00:00",
+		importDate:     "2007-04-10 00:00:00",
+		sourceSystemCD: "DEMO",
 	}
 
-	lo := LocalOntology{
-		HLevel:           "4",
-		Fullname:         "\\i2b2\\Demographics\\Zip codes\\Arkansas\\Parkdale\\",
-		Name:             "Parkdale",
-		SynonymCD:        "N",
-		VisualAttributes: "FA ",
-		TotalNum:         "\\N",
-		BaseCode:         "\\N",
-		MetadataXML:      "\\N",
-		FactTableColumn:  "concept_cd",
-		Tablename:        "concept_dimension",
-		ColumnName:       "concept_path",
-		ColumnDataType:   "T",
-		Operator:         "LIKE",
-		DimCode:          "\\i2b2\\Demographics\\Zip codes\\Arkansas\\Parkdale\\",
-		Comment:          "\\N",
-		Tooltip:          "Demographics \\ Zip codes \\ Arkansas \\ Parkdale",
-		AppliedPath:      "@",
-		AdminColumns:     ac,
-		ValueTypeCD:      "\\N",
-		ExclusionCD:      "\\N",
-		Path:             "\\N",
-		Symbol:           "\\N",
+	lo := localOntologyRecord{
+		hLevel:           "4",
+		fullname:         "\\i2b2\\Demographics\\Zip codes\\Arkansas\\Parkdale\\",
+		name:             "Parkdale",
+		synonymCD:        "N",
+		visualAttributes: "FA ",
+		totalNum:         "\\N",
+		baseCode:         "\\N",
+		metadataXML:      "\\N",
+		factTableColumn:  "concept_cd",
+		tablename:        "concept_dimension",
+		columnName:       "concept_path",
+		columnDataType:   "T",
+		operator:         "LIKE",
+		dimCode:          "\\i2b2\\Demographics\\Zip codes\\Arkansas\\Parkdale\\",
+		comment:          "\\N",
+		tooltip:          "Demographics \\ Zip codes \\ Arkansas \\ Parkdale",
+		appliedPath:      "@",
+		adminColumns:     ac,
+		valueTypeCD:      "\\N",
+		exclusionCD:      "\\N",
+		path:             "\\N",
+		symbol:           "\\N",
 
-		PCoriBasecode: "\\N",
+		pCoriBasecode: "\\N",
 	}
 
-	assert.Equal(t, lo.ToCSVText(), `"4","\i2b2\Demographics\Zip codes\Arkansas\Parkdale\","Parkdale","N","FA ",,,,"concept_cd","concept_dimension","concept_path","T","LIKE","\i2b2\Demographics\Zip codes\Arkansas\Parkdale\",,"Demographics \ Zip codes \ Arkansas \ Parkdale","@","2007-04-10 00:00:00","2007-04-10 00:00:00","2007-04-10 00:00:00","DEMO",,,,`)
+	assert.Equal(t, lo.toCSVText(), `"4","\i2b2\Demographics\Zip codes\Arkansas\Parkdale\","Parkdale","N","FA ",,,,"concept_cd","concept_dimension","concept_path","T","LIKE","\i2b2\Demographics\Zip codes\Arkansas\Parkdale\",,"Demographics \ Zip codes \ Arkansas \ Parkdale","@","2007-04-10 00:00:00","2007-04-10 00:00:00","2007-04-10 00:00:00","DEMO",,,,`)
 
 	tag := libunlynx.GroupingKey("1")
-	assert.Equal(t, LocalOntologySensitiveConceptToCSVText(&tag, 20), `"3","\medco\tagged\1\","","N","LA ",,"TAG_ID:20",,"concept_cd","concept_dimension","concept_path","T","LIKE","\medco\tagged\concept\1\",,,"NOW()",,,,"TAG_ID","@",,,,`)
+	assert.Equal(t, localOntologySensitiveConceptToCSVText(&tag, 20), `"3","\medco\tagged\1\","","N","LA ",,"TAG_ID:20",,"concept_cd","concept_dimension","concept_path","T","LIKE","\medco\tagged\concept\1\",,,"NOW()",,,,"TAG_ID","@",,,,`)
 
 }
 
 func TestPatientDimension_ToCSVText(t *testing.T) {
 
-	ac := AdministrativeColumns{
-		UpdateDate:     "2010-11-04 10:43:00",
-		DownloadDate:   "2010-08-18 09:50:00",
-		ImportDate:     "2010-11-04 10:43:00",
-		SourceSystemCD: "DEMO",
-		UploadID:       "\\N",
+	ac := administrativeColumns{
+		updateDate:     "2010-11-04 10:43:00",
+		downloadDate:   "2010-08-18 09:50:00",
+		importDate:     "2010-11-04 10:43:00",
+		sourceSystemCD: "DEMO",
+		uploadID:       "\\N",
 	}
 
-	pdk := PatientDimensionPK{
-		PatientNum: "1000000001",
+	pdk := patientDimensionPK{
+		patientNum: "1000000001",
 	}
 
-	op := make([]OptionalFields, 0)
-	op = append(op, OptionalFields{ValType: "sex_cd", Value: "F"})
-	op = append(op, OptionalFields{ValType: "age_in_years_num", Value: "24"})
-	op = append(op, OptionalFields{ValType: "language_cd", Value: "english"})
-	op = append(op, OptionalFields{ValType: "race_cd", Value: "black"})
-	op = append(op, OptionalFields{ValType: "marital_status_cd", Value: "married"})
-	op = append(op, OptionalFields{ValType: "religion_cd", Value: "roman catholic"})
-	op = append(op, OptionalFields{ValType: "zip_cd", Value: "02140"})
-	op = append(op, OptionalFields{ValType: "statecityzip_path", Value: "Zip codes\\Massachusetts\\Cambridge\\02140\\"})
-	op = append(op, OptionalFields{ValType: "income_cd", Value: "Low"})
-	op = append(op, OptionalFields{ValType: "patient_blob", Value: ""})
+	op := make([]optionalFields, 0)
+	op = append(op, optionalFields{valType: "sex_cd", value: "F"})
+	op = append(op, optionalFields{valType: "age_in_years_num", value: "24"})
+	op = append(op, optionalFields{valType: "language_cd", value: "english"})
+	op = append(op, optionalFields{valType: "race_cd", value: "black"})
+	op = append(op, optionalFields{valType: "marital_status_cd", value: "married"})
+	op = append(op, optionalFields{valType: "religion_cd", value: "roman catholic"})
+	op = append(op, optionalFields{valType: "zip_cd", value: "02140"})
+	op = append(op, optionalFields{valType: "statecityzip_path", value: "Zip codes\\Massachusetts\\Cambridge\\02140\\"})
+	op = append(op, optionalFields{valType: "income_cd", value: "Low"})
+	op = append(op, optionalFields{valType: "patient_blob", value: ""})
 
 	_, pubKey := libunlynx.GenKey()
 	enc := libunlynx.EncryptInt(pubKey, int64(2))
 
-	pd := PatientDimension{
-		PK:             pdk,
-		VitalStatusCD:  "D",
-		BirthDate:      "1985-11-17 00:00:00",
-		DeathDate:      "\\N",
-		OptionalFields: op,
-		AdminColumns:   ac,
-		EncryptedFlag:  *enc,
+	pd := patientDimensionRecord{
+		pk:             pdk,
+		vitalStatusCD:  "D",
+		birthDate:      "1985-11-17 00:00:00",
+		deathDate:      "\\N",
+		optionalFields: op,
+		adminColumns:   ac,
+		encryptedFlag:  *enc,
 	}
 
-	encryptedFlagString, err := pd.EncryptedFlag.Serialize()
+	encryptedFlagString, err := pd.encryptedFlag.Serialize()
 	assert.NoError(t, err)
 	encodedEncryptedFlag := "\"" + encryptedFlagString + "\""
 
-	assert.Equal(t, pd.ToCSVText(false), `"1000000001","D","1985-11-17 00:00:00",,"F","24","english","black","married","roman catholic","02140","Zip codes\Massachusetts\Cambridge\02140\","Low","","2010-11-04 10:43:00","2010-08-18 09:50:00","2010-11-04 10:43:00","DEMO",,`+encodedEncryptedFlag)
-	assert.Equal(t, pd.ToCSVText(true), `"1000000001",,,,,,,,,,,,,,,,,,,`+encodedEncryptedFlag)
+	assert.Equal(t, pd.toCSVText(false), `"1000000001","D","1985-11-17 00:00:00",,"F","24","english","black","married","roman catholic","02140","Zip codes\Massachusetts\Cambridge\02140\","Low","","2010-11-04 10:43:00","2010-08-18 09:50:00","2010-11-04 10:43:00","DEMO",,`+encodedEncryptedFlag)
+	assert.Equal(t, pd.toCSVText(true), `"1000000001",,,,,,,,,,,,,,,,,,,`+encodedEncryptedFlag)
 
 }
 
 func TestVisitDimension_ToCSVText(t *testing.T) {
-	ac := AdministrativeColumns{
-		UpdateDate:     "2010-11-04 10:43:00",
-		DownloadDate:   "2010-08-18 09:50:00",
-		ImportDate:     "2010-11-04 10:43:00",
-		SourceSystemCD: "DEMO",
-		UploadID:       "\\N",
+	ac := administrativeColumns{
+		updateDate:     "2010-11-04 10:43:00",
+		downloadDate:   "2010-08-18 09:50:00",
+		importDate:     "2010-11-04 10:43:00",
+		sourceSystemCD: "DEMO",
+		uploadID:       "\\N",
 	}
 
-	vdk := VisitDimensionPK{
-		EncounterNum: "471185",
-		PatientNum:   "1000000101",
+	vdk := visitDimensionPK{
+		encounterNum: "471185",
+		patientNum:   "1000000101",
 	}
 
-	op := make([]OptionalFields, 0)
-	op = append(op, OptionalFields{ValType: "inout_cd", Value: "O"})
-	op = append(op, OptionalFields{ValType: "location_cd", Value: ""})
-	op = append(op, OptionalFields{ValType: "location_path", Value: ""})
-	op = append(op, OptionalFields{ValType: "length_of_stay", Value: "\\N"})
-	op = append(op, OptionalFields{ValType: "visit_blob", Value: ""})
+	op := make([]optionalFields, 0)
+	op = append(op, optionalFields{valType: "inout_cd", value: "O"})
+	op = append(op, optionalFields{valType: "location_cd", value: ""})
+	op = append(op, optionalFields{valType: "location_path", value: ""})
+	op = append(op, optionalFields{valType: "length_of_stay", value: "\\N"})
+	op = append(op, optionalFields{valType: "visit_blob", value: ""})
 
-	vd := VisitDimension{
-		PK:             vdk,
-		ActiveStatusCD: "U",
-		StartDate:      "1997-01-02 00:00:00",
-		EndDate:        "\\N",
-		OptionalFields: op,
-		AdminColumns:   ac,
+	vd := visitDimension{
+		pk:             vdk,
+		activeStatusCD: "U",
+		startDate:      "1997-01-02 00:00:00",
+		endDate:        "\\N",
+		optionalFields: op,
+		adminColumns:   ac,
 	}
 
-	assert.Equal(t, vd.ToCSVText(false), `"471185","1000000101","U","1997-01-02 00:00:00",,"O","","",,"","2010-11-04 10:43:00","2010-08-18 09:50:00","2010-11-04 10:43:00","DEMO",`)
-	assert.Equal(t, vd.ToCSVText(true), `"471185","1000000101",,,,,,,,,,,,,`)
+	assert.Equal(t, vd.toCSVText(false), `"471185","1000000101","U","1997-01-02 00:00:00",,"O","","",,"","2010-11-04 10:43:00","2010-08-18 09:50:00","2010-11-04 10:43:00","DEMO",`)
+	assert.Equal(t, vd.toCSVText(true), `"471185","1000000101",,,,,,,,,,,,,`)
 }
 
 func TestConceptDimension_ToCSVText(t *testing.T) {
 
 	csvString := `"\i2b2\Demographics\Age\>= 65 years old\100\","DEM|AGE:100"," 100 years old","","2010-09-28 11:15:00","2010-08-18 09:50:00","2010-09-28 11:40:00","DEMO",`
 
-	ac := AdministrativeColumns{
-		UpdateDate:     "2010-09-28 11:15:00",
-		DownloadDate:   "2010-08-18 09:50:00",
-		ImportDate:     "2010-09-28 11:40:00",
-		SourceSystemCD: "DEMO",
-		UploadID:       "\\N",
+	ac := administrativeColumns{
+		updateDate:     "2010-09-28 11:15:00",
+		downloadDate:   "2010-08-18 09:50:00",
+		importDate:     "2010-09-28 11:40:00",
+		sourceSystemCD: "DEMO",
+		uploadID:       "\\N",
 	}
 
-	cdk := &ConceptDimensionPK{
-		ConceptPath: "\\i2b2\\Demographics\\Age\\>= 65 years old\\100\\",
+	cdk := conceptDimensionPK{
+		conceptPath: "\\i2b2\\Demographics\\Age\\>= 65 years old\\100\\",
 	}
 
-	cd := ConceptDimension{
-		PK:           cdk,
-		ConceptCD:    "DEM|AGE:100",
-		NameChar:     " 100 years old",
-		ConceptBlob:  "",
-		AdminColumns: ac,
+	cd := conceptDimensionRecord{
+		pk:           cdk,
+		conceptCD:    "DEM|AGE:100",
+		nameChar:     " 100 years old",
+		conceptBlob:  "",
+		adminColumns: ac,
 	}
 
-	assert.Equal(t, csvString, cd.ToCSVText())
+	assert.Equal(t, csvString, cd.toCSVText())
 
 	tag := libunlynx.GroupingKey("1")
-	assert.Equal(t, `"\medco\tagged\concept\1\","TAG_ID:20",,,,,"NOW()",,`, ConceptDimensionSensitiveToCSVText(&tag, 20))
+	assert.Equal(t, `"\medco\tagged\concept\1\","TAG_ID:20",,,,,"NOW()",,`, conceptDimensionSensitiveToCSVText(&tag, 20))
 }
 
 func TestObservationFact_ToCSVText(t *testing.T) {
 
 	csvString := `"482232","1000000060","Affy:221610_s_at","LCS-I2B2:D000109064","2009-01-16 00:00:00","@","1","N","E","79.30000","",,"","2009-01-16 00:00:00","@","",,"2010-09-28 11:15:00","2010-08-18 09:50:00","2010-09-28 11:40:00","DEMO",,"1"`
 
-	ac := AdministrativeColumns{
-		UpdateDate:      "2010-09-28 11:15:00",
-		DownloadDate:    "2010-08-18 09:50:00",
-		ImportDate:      "2010-09-28 11:40:00",
-		SourceSystemCD:  "DEMO",
-		UploadID:        "\\N",
-		TextSearchIndex: "1",
+	ac := administrativeColumns{
+		updateDate:      "2010-09-28 11:15:00",
+		downloadDate:    "2010-08-18 09:50:00",
+		importDate:      "2010-09-28 11:40:00",
+		sourceSystemCD:  "DEMO",
+		uploadID:        "\\N",
+		textSearchIndex: "1",
 	}
 
-	ofk := &ObservationFactPK{
-		EncounterNum: "482232",
-		PatientNum:   "1000000060",
-		ConceptCD:    "Affy:221610_s_at",
-		ProviderID:   "LCS-I2B2:D000109064",
-		StartDate:    "2009-01-16 00:00:00",
-		ModifierCD:   "@",
-		InstanceNum:  "1",
+	ofk := observationFactPK{
+		encounterNum: "482232",
+		patientNum:   "1000000060",
+		conceptCD:    "Affy:221610_s_at",
+		providerID:   "LCS-I2B2:D000109064",
+		startDate:    "2009-01-16 00:00:00",
+		modifierCD:   "@",
+		instanceNum:  "1",
 	}
 
-	of := ObservationFact{
-		PK:              ofk,
-		ValTypeCD:       "N",
-		TValChar:        "E",
-		NValNum:         "79.30000",
-		ValueFlagCD:     "",
-		QuantityNum:     "\\N",
-		UnitsCD:         "",
-		EndDate:         "2009-01-16 00:00:00",
-		LocationCD:      "@",
-		ObservationBlob: "",
-		ConfidenceNum:   "\\N",
-		AdminColumns:    ac,
+	of := observationFactRecord{
+		pk:              ofk,
+		valTypeCD:       "N",
+		tValChar:        "E",
+		nValNum:         "79.30000",
+		valueFlagCD:     "",
+		quantityNum:     "\\N",
+		unitsCD:         "",
+		endDate:         "2009-01-16 00:00:00",
+		locationCD:      "@",
+		observationBlob: "",
+		confidenceNum:   "\\N",
+		adminColumns:    ac,
 	}
 
-	assert.Equal(t, csvString, of.ToCSVText())
+	assert.Equal(t, csvString, of.toCSVText())
 }
 
 // ------------------------------------------------------------------------------------------------------------- //
@@ -299,30 +299,30 @@ func TestObservationFact_ToCSVText(t *testing.T) {
 func TestTableAccessFromString(t *testing.T) {
 	csvString := `"BIRN","BIRN","N","0","\BIRN\","Clinical Trials","N","CA ","","","","concept_cd","concept_dimension","concept_path","T","LIKE","\BIRN\","","Clinical Trials","","","",""`
 
-	ta := TableAccess{
-		TableCD:          "BIRN",
-		TableName:        "BIRN",
-		ProtectedAccess:  "N",
-		Hlevel:           "0",
-		Fullname:         "\\BIRN\\",
-		Name:             "Clinical Trials",
-		SynonymCD:        "N",
-		VisualAttributes: "CA ",
-		TotalNum:         "",
-		BaseCode:         "",
-		MetadataXML:      "",
-		FactTableColumn:  "concept_cd",
-		DimTableName:     "concept_dimension",
-		ColumnName:       "concept_path",
-		ColumnDataType:   "T",
-		Operator:         "LIKE",
-		DimCode:          "\\BIRN\\",
-		Comment:          "",
-		Tooltip:          "Clinical Trials",
-		EntryData:        "",
-		ChangeData:       "",
-		StatusCD:         "",
-		ValueType:        "",
+	ta := tableAccessRecord{
+		tableCD:          "BIRN",
+		tableName:        "BIRN",
+		protectedAccess:  "N",
+		hlevel:           "0",
+		fullname:         "\\BIRN\\",
+		name:             "Clinical Trials",
+		synonymCD:        "N",
+		visualAttributes: "CA ",
+		totalNum:         "",
+		baseCode:         "",
+		metadataXML:      "",
+		factTableColumn:  "concept_cd",
+		dimTableName:     "concept_dimension",
+		columnName:       "concept_path",
+		columnDataType:   "T",
+		operator:         "LIKE",
+		dimCode:          "\\BIRN\\",
+		comment:          "",
+		tooltip:          "Clinical Trials",
+		entryData:        "",
+		changeData:       "",
+		statusCD:         "",
+		valueType:        "",
 	}
 
 	var csvFile = strings.NewReader(csvString)
@@ -330,46 +330,46 @@ func TestTableAccessFromString(t *testing.T) {
 	lines, err := r.ReadAll()
 	assert.Nil(t, err, "Parsing error")
 
-	assert.Equal(t, TableAccessFromString(lines[0]), ta)
+	assert.Equal(t, tableAccessFromString(lines[0]), ta)
 }
 
 func TestLocalOntologyFromString(t *testing.T) {
 	csvString := `"4","\i2b2\Demographics\Zip codes\Arkansas\Parkdale\","Parkdale","N","FA ","\N","\N","\N","concept_cd","concept_dimension","concept_path","T","LIKE","\i2b2\Demographics\Zip codes\Arkansas\Parkdale\","\N","Demographics \ Zip codes \ Arkansas \ Parkdale","@","2007-04-10 00:00:00","2007-04-10 00:00:00","2007-04-10 00:00:00","DEMO","\N","\N","\N","\N","\N"`
 
-	ac := AdministrativeColumns{
-		UpdateDate:     "2007-04-10 00:00:00",
-		DownloadDate:   "2007-04-10 00:00:00",
-		ImportDate:     "2007-04-10 00:00:00",
-		SourceSystemCD: "DEMO",
+	ac := administrativeColumns{
+		updateDate:     "2007-04-10 00:00:00",
+		downloadDate:   "2007-04-10 00:00:00",
+		importDate:     "2007-04-10 00:00:00",
+		sourceSystemCD: "DEMO",
 	}
 
-	lo := LocalOntology{
-		HLevel:           "4",
-		Fullname:         "\\i2b2\\Demographics\\Zip codes\\Arkansas\\Parkdale\\",
-		Name:             "Parkdale",
-		SynonymCD:        "N",
-		VisualAttributes: "FA ",
-		TotalNum:         "\\N",
-		BaseCode:         "\\N",
-		MetadataXML:      "\\N",
-		FactTableColumn:  "concept_cd",
-		Tablename:        "concept_dimension",
-		ColumnName:       "concept_path",
-		ColumnDataType:   "T",
-		Operator:         "LIKE",
-		DimCode:          "\\i2b2\\Demographics\\Zip codes\\Arkansas\\Parkdale\\",
-		Comment:          "\\N",
-		Tooltip:          "Demographics \\ Zip codes \\ Arkansas \\ Parkdale",
-		AppliedPath:      "@",
-		AdminColumns:     ac,
-		ValueTypeCD:      "\\N",
-		ExclusionCD:      "\\N",
-		Path:             "\\N",
-		Symbol:           "\\N",
+	lo := localOntologyRecord{
+		hLevel:           "4",
+		fullname:         "\\i2b2\\Demographics\\Zip codes\\Arkansas\\Parkdale\\",
+		name:             "Parkdale",
+		synonymCD:        "N",
+		visualAttributes: "FA ",
+		totalNum:         "\\N",
+		baseCode:         "\\N",
+		metadataXML:      "\\N",
+		factTableColumn:  "concept_cd",
+		tablename:        "concept_dimension",
+		columnName:       "concept_path",
+		columnDataType:   "T",
+		operator:         "LIKE",
+		dimCode:          "\\i2b2\\Demographics\\Zip codes\\Arkansas\\Parkdale\\",
+		comment:          "\\N",
+		tooltip:          "Demographics \\ Zip codes \\ Arkansas \\ Parkdale",
+		appliedPath:      "@",
+		adminColumns:     ac,
+		valueTypeCD:      "\\N",
+		exclusionCD:      "\\N",
+		path:             "\\N",
+		symbol:           "\\N",
 
-		PCoriBasecode: "",
+		pCoriBasecode: "",
 
-		PlainCode: "",
+		plainCode: "",
 	}
 
 	var csvFile = strings.NewReader(csvString)
@@ -377,50 +377,50 @@ func TestLocalOntologyFromString(t *testing.T) {
 	lines, err := r.ReadAll()
 	assert.Nil(t, err, "Parsing error")
 
-	assert.Equal(t, *LocalOntologyFromString(lines[0], false), lo)
-	lo.PlainCode = "\\N"
-	assert.Equal(t, *LocalOntologyFromString(lines[0], true), lo)
+	assert.Equal(t, *localOntologyFromString(lines[0], false), lo)
+	lo.plainCode = "\\N"
+	assert.Equal(t, *localOntologyFromString(lines[0], true), lo)
 }
 
 func TestPatientDimensionFromString(t *testing.T) {
 	aux := [...]string{"patient_num", "vital_status_cd", "birth_date", "death_date", "sex_cd", "age_in_years_num", "language_cd", "race_cd", "marital_status_cd", "religion_cd", "zip_cd", "statecityzip_path", "income_cd", "patient_blob", "update_date", "download_date", "import_date", "sourcesystem_cd", "upload_id"}
-	HeaderPatientDimension = aux[:]
+	headerPatientDimension = aux[:]
 
-	ac := AdministrativeColumns{
-		UpdateDate:     "2010-11-04 10:43:00",
-		DownloadDate:   "2010-08-18 09:50:00",
-		ImportDate:     "2010-11-04 10:43:00",
-		SourceSystemCD: "DEMO",
-		UploadID:       "\\N",
+	ac := administrativeColumns{
+		updateDate:     "2010-11-04 10:43:00",
+		downloadDate:   "2010-08-18 09:50:00",
+		importDate:     "2010-11-04 10:43:00",
+		sourceSystemCD: "DEMO",
+		uploadID:       "\\N",
 	}
 
-	pdk := PatientDimensionPK{
-		PatientNum: "1000000001",
+	pdk := patientDimensionPK{
+		patientNum: "1000000001",
 	}
 
-	op := make([]OptionalFields, 0)
-	op = append(op, OptionalFields{ValType: "sex_cd", Value: "F"})
-	op = append(op, OptionalFields{ValType: "age_in_years_num", Value: "24"})
-	op = append(op, OptionalFields{ValType: "language_cd", Value: "english"})
-	op = append(op, OptionalFields{ValType: "race_cd", Value: "black"})
-	op = append(op, OptionalFields{ValType: "marital_status_cd", Value: "married"})
-	op = append(op, OptionalFields{ValType: "religion_cd", Value: "roman catholic"})
-	op = append(op, OptionalFields{ValType: "zip_cd", Value: "02140"})
-	op = append(op, OptionalFields{ValType: "statecityzip_path", Value: "Zip codes\\Massachusetts\\Cambridge\\02140\\"})
-	op = append(op, OptionalFields{ValType: "income_cd", Value: "Low"})
-	op = append(op, OptionalFields{ValType: "patient_blob", Value: ""})
+	op := make([]optionalFields, 0)
+	op = append(op, optionalFields{valType: "sex_cd", value: "F"})
+	op = append(op, optionalFields{valType: "age_in_years_num", value: "24"})
+	op = append(op, optionalFields{valType: "language_cd", value: "english"})
+	op = append(op, optionalFields{valType: "race_cd", value: "black"})
+	op = append(op, optionalFields{valType: "marital_status_cd", value: "married"})
+	op = append(op, optionalFields{valType: "religion_cd", value: "roman catholic"})
+	op = append(op, optionalFields{valType: "zip_cd", value: "02140"})
+	op = append(op, optionalFields{valType: "statecityzip_path", value: "Zip codes\\Massachusetts\\Cambridge\\02140\\"})
+	op = append(op, optionalFields{valType: "income_cd", value: "Low"})
+	op = append(op, optionalFields{valType: "patient_blob", value: ""})
 
 	_, pubKey := libunlynx.GenKey()
 	enc := libunlynx.EncryptInt(pubKey, int64(2))
 
-	pd := PatientDimension{
-		PK:             pdk,
-		VitalStatusCD:  "D",
-		BirthDate:      "1985-11-17 00:00:00",
-		DeathDate:      "\\N",
-		OptionalFields: op,
-		AdminColumns:   ac,
-		EncryptedFlag:  *enc,
+	pd := patientDimensionRecord{
+		pk:             pdk,
+		vitalStatusCD:  "D",
+		birthDate:      "1985-11-17 00:00:00",
+		deathDate:      "\\N",
+		optionalFields: op,
+		adminColumns:   ac,
+		encryptedFlag:  *enc,
 	}
 
 	csvString := `"1000000001","D","1985-11-17 00:00:00","\N","F","24","english","black","married","roman catholic","02140","Zip codes\Massachusetts\Cambridge\02140\","Low","","2010-11-04 10:43:00","2010-08-18 09:50:00","2010-11-04 10:43:00","DEMO","\N"`
@@ -430,47 +430,47 @@ func TestPatientDimensionFromString(t *testing.T) {
 	lines, err := r.ReadAll()
 	assert.Nil(t, err, "Parsing error")
 
-	pdkExpected, pdExpected := PatientDimensionFromString(lines[0], pubKey)
+	pdkExpected, pdExpected := patientDimensionFromString(lines[0], pubKey)
 	assert.Equal(t, pdkExpected, pdk)
 
 	// place them nil because encryption is randomized
-	pdExpected.EncryptedFlag = libunlynx.CipherText{}
-	pd.EncryptedFlag = libunlynx.CipherText{}
+	pdExpected.encryptedFlag = libunlynx.CipherText{}
+	pd.encryptedFlag = libunlynx.CipherText{}
 
-	assert.Equal(t, pdExpected, pd)
+	assert.Equal(t, pdExpected, &pd)
 }
 
 func TestVisitDimensionFromString(t *testing.T) {
 	aux := [...]string{"encounter_num", "patient_num", "active_status_cd", "start_date", "end_date", "inout_cd", "location_cd", "location_path", "length_of_stay", "visit_blob", "update_date", "download_date", "import_date", "sourcesystem_cd", "upload_id"}
-	HeaderPatientDimension = aux[:]
+	headerPatientDimension = aux[:]
 
-	ac := AdministrativeColumns{
-		UpdateDate:     "2010-11-04 10:43:00",
-		DownloadDate:   "2010-08-18 09:50:00",
-		ImportDate:     "2010-11-04 10:43:00",
-		SourceSystemCD: "DEMO",
-		UploadID:       "\\N",
+	ac := administrativeColumns{
+		updateDate:     "2010-11-04 10:43:00",
+		downloadDate:   "2010-08-18 09:50:00",
+		importDate:     "2010-11-04 10:43:00",
+		sourceSystemCD: "DEMO",
+		uploadID:       "\\N",
 	}
 
-	vdk := VisitDimensionPK{
-		EncounterNum: "471185",
-		PatientNum:   "1000000101",
+	vdk := visitDimensionPK{
+		encounterNum: "471185",
+		patientNum:   "1000000101",
 	}
 
-	op := make([]OptionalFields, 0)
-	op = append(op, OptionalFields{ValType: "inout_cd", Value: "O"})
-	op = append(op, OptionalFields{ValType: "location_cd", Value: ""})
-	op = append(op, OptionalFields{ValType: "location_path", Value: ""})
-	op = append(op, OptionalFields{ValType: "length_of_stay", Value: "\\N"})
-	op = append(op, OptionalFields{ValType: "visit_blob", Value: ""})
+	op := make([]optionalFields, 0)
+	op = append(op, optionalFields{valType: "inout_cd", value: "O"})
+	op = append(op, optionalFields{valType: "location_cd", value: ""})
+	op = append(op, optionalFields{valType: "location_path", value: ""})
+	op = append(op, optionalFields{valType: "length_of_stay", value: "\\N"})
+	op = append(op, optionalFields{valType: "visit_blob", value: ""})
 
-	vd := VisitDimension{
-		PK:             vdk,
-		ActiveStatusCD: "U",
-		StartDate:      "1997-01-02 00:00:00",
-		EndDate:        "\\N",
-		OptionalFields: op,
-		AdminColumns:   ac,
+	vd := visitDimension{
+		pk:             vdk,
+		activeStatusCD: "U",
+		startDate:      "1997-01-02 00:00:00",
+		endDate:        "\\N",
+		optionalFields: op,
+		adminColumns:   ac,
 	}
 
 	csvString := `"471185","1000000101","U","1997-01-02 00:00:00","\N","O","","","\N","","2010-11-04 10:43:00","2010-08-18 09:50:00","2010-11-04 10:43:00","DEMO","\N"`
@@ -480,33 +480,33 @@ func TestVisitDimensionFromString(t *testing.T) {
 	lines, err := r.ReadAll()
 	assert.Nil(t, err, "Parsing error")
 
-	vdkExpected, vdExpected := VisitDimensionFromString(lines[0])
+	vdkExpected, vdExpected := visitDimensionFromString(lines[0])
 	assert.Equal(t, vdkExpected, vdk)
 
-	assert.Equal(t, vdExpected, vd)
+	assert.Equal(t, vdExpected, &vd)
 }
 
 func TestConceptDimensionFromString(t *testing.T) {
 	csvString := `"\i2b2\Demographics\Age\>= 65 years old\100\","DEM|AGE:100"," 100 years old","","2010-09-28 11:15:00","2010-08-18 09:50:00","2010-09-28 11:40:00","DEMO","\N"`
 
-	ac := AdministrativeColumns{
-		UpdateDate:     "2010-09-28 11:15:00",
-		DownloadDate:   "2010-08-18 09:50:00",
-		ImportDate:     "2010-09-28 11:40:00",
-		SourceSystemCD: "DEMO",
-		UploadID:       "\\N",
+	ac := administrativeColumns{
+		updateDate:     "2010-09-28 11:15:00",
+		downloadDate:   "2010-08-18 09:50:00",
+		importDate:     "2010-09-28 11:40:00",
+		sourceSystemCD: "DEMO",
+		uploadID:       "\\N",
 	}
 
-	cdk := &ConceptDimensionPK{
-		ConceptPath: "\\i2b2\\Demographics\\Age\\>= 65 years old\\100\\",
+	cdk := conceptDimensionPK{
+		conceptPath: "\\i2b2\\Demographics\\Age\\>= 65 years old\\100\\",
 	}
 
-	cd := ConceptDimension{
-		PK:           cdk,
-		ConceptCD:    "DEM|AGE:100",
-		NameChar:     " 100 years old",
-		ConceptBlob:  "",
-		AdminColumns: ac,
+	cd := &conceptDimensionRecord{
+		pk:           cdk,
+		conceptCD:    "DEM|AGE:100",
+		nameChar:     " 100 years old",
+		conceptBlob:  "",
+		adminColumns: ac,
 	}
 
 	var csvFile = strings.NewReader(csvString)
@@ -514,49 +514,49 @@ func TestConceptDimensionFromString(t *testing.T) {
 	lines, err := r.ReadAll()
 	assert.Nil(t, err, "Parsing error")
 
-	cdkExpected, cdExpected := ConceptDimensionFromString(lines[0])
+	cdkExpected, cdExpected := conceptDimensionFromString(lines[0])
 
-	assert.Equal(t, cdkExpected, *cdk)
+	assert.Equal(t, cdkExpected, cdk)
 	assert.Equal(t, cdExpected, cd)
 }
 
 func TestObservationFactFromString(t *testing.T) {
 	csvString := `"482232","1000000060","Affy:221610_s_at","LCS-I2B2:D000109064","2009-01-16 00:00:00","@","1","N","E","79.30000","","\N","","2009-01-16 00:00:00","@","","\N","2010-09-28 11:15:00","2010-08-18 09:50:00","2010-09-28 11:40:00","DEMO","\N","1"
 `
-	TextSearchIndex = 0
+	textSearchIndex = 0
 
-	ac := AdministrativeColumns{
-		UpdateDate:      "2010-09-28 11:15:00",
-		DownloadDate:    "2010-08-18 09:50:00",
-		ImportDate:      "2010-09-28 11:40:00",
-		SourceSystemCD:  "DEMO",
-		UploadID:        "\\N",
-		TextSearchIndex: "0",
+	ac := administrativeColumns{
+		updateDate:      "2010-09-28 11:15:00",
+		downloadDate:    "2010-08-18 09:50:00",
+		importDate:      "2010-09-28 11:40:00",
+		sourceSystemCD:  "DEMO",
+		uploadID:        "\\N",
+		textSearchIndex: "0",
 	}
 
-	ofk := &ObservationFactPK{
-		EncounterNum: "482232",
-		PatientNum:   "1000000060",
-		ConceptCD:    "Affy:221610_s_at",
-		ProviderID:   "LCS-I2B2:D000109064",
-		StartDate:    "2009-01-16 00:00:00",
-		ModifierCD:   "",
-		InstanceNum:  "1",
+	ofk := observationFactPK{
+		encounterNum: "482232",
+		patientNum:   "1000000060",
+		conceptCD:    "Affy:221610_s_at",
+		providerID:   "LCS-I2B2:D000109064",
+		startDate:    "2009-01-16 00:00:00",
+		modifierCD:   "@",
+		instanceNum:  "1",
 	}
 
-	of := ObservationFact{
-		PK:              ofk,
-		ValTypeCD:       "N",
-		TValChar:        "E",
-		NValNum:         "79.30000",
-		ValueFlagCD:     "",
-		QuantityNum:     "\\N",
-		UnitsCD:         "",
-		EndDate:         "2009-01-16 00:00:00",
-		LocationCD:      "@",
-		ObservationBlob: "",
-		ConfidenceNum:   "\\N",
-		AdminColumns:    ac,
+	of := observationFactRecord{
+		pk:              ofk,
+		valTypeCD:       "N",
+		tValChar:        "E",
+		nValNum:         "79.30000",
+		valueFlagCD:     "",
+		quantityNum:     "\\N",
+		unitsCD:         "",
+		endDate:         "2009-01-16 00:00:00",
+		locationCD:      "@",
+		observationBlob: "",
+		confidenceNum:   "\\N",
+		adminColumns:    ac,
 	}
 
 	var csvFile = strings.NewReader(csvString)
@@ -564,8 +564,8 @@ func TestObservationFactFromString(t *testing.T) {
 	lines, err := r.ReadAll()
 	assert.Nil(t, err, "Parsing error")
 
-	ofkExpected, ofExpected := ObservationFactFromString(lines[0])
+	ofkExpected, ofExpected := observationFactFromString(lines[0])
 
 	assert.Equal(t, ofkExpected, ofk)
-	assert.Equal(t, ofExpected, of)
+	assert.Equal(t, ofExpected, &of)
 }

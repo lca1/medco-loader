@@ -19,9 +19,9 @@ var local *onet.LocalTest
 func init() {
 	log.SetDebugVisible(2)
 	setupEncryptEnv()
-	Testing = true
-	EnabledModifiers = true
-	AllSensitive = false
+	test = true
+	enableModifiers = true
+	allSensitive = false
 }
 
 func getRoster(groupFilePath string) (*onet.Roster, *onet.LocalTest, error) {
@@ -69,29 +69,29 @@ func setupEncryptEnv() {
 
 func TestConvertTableAccess(t *testing.T) {
 
-	assert.Nil(t, ParseTableAccess())
-	assert.Nil(t, ConvertTableAccess())
+	assert.Nil(t, parseTableAccess())
+	assert.Nil(t, convertTableAccess())
 
 }
 
 func TestConvertOntology(t *testing.T) {
 
-	ListSensitiveConcepts = make(map[string]struct{})
-	ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Benign neoplasms (210-229)\(216) Benign neoplasm of skin\`] = struct{}{}
+	listSensitiveConcepts = make(map[string]struct{})
+	listSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Benign neoplasms (210-229)\(216) Benign neoplasm of skin\`] = struct{}{}
 
-	assert.Nil(t, ConvertLocalOntology(el, 0))
-	assert.Nil(t, GenerateMedCoOntology())
+	assert.Nil(t, convertLocalOntology(el, 0))
+	assert.Nil(t, generateMedCoOntology())
 
 }
 
 func TestConvertOntologyWithExcludedConcepts(t *testing.T) {
 
 	// testing modifiers with m_exclusion_cd = "X"
-	ListSensitiveConcepts = make(map[string]struct{})
-	ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Malignant neoplasms (140-208)\`] = struct{}{}
+	listSensitiveConcepts = make(map[string]struct{})
+	listSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Malignant neoplasms (140-208)\`] = struct{}{}
 
-	assert.Nil(t, ConvertLocalOntology(el, 0))
-	assert.Nil(t, GenerateMedCoOntology())
+	assert.Nil(t, convertLocalOntology(el, 0))
+	assert.Nil(t, generateMedCoOntology())
 
 	local.CloseAll()
 }
@@ -100,32 +100,29 @@ func TestConvertModifierDimension(t *testing.T) {
 
 	TestConvertOntology(t)
 
-	assert.Nil(t, ParseModifierDimension())
-	assert.Nil(t, ConvertModifierDimension())
+	assert.Nil(t, parseModifierDimension())
+	assert.Nil(t, convertModifierDimension())
 
 }
 
 func TestConvertConceptDimension(t *testing.T) {
 
-	if EnabledModifiers {
+	if enableModifiers {
 		TestConvertModifierDimension(t)
 	} else {
 		TestConvertOntology(t)
 	}
 
-	assert.Nil(t, ParseConceptDimension())
-	assert.Nil(t, ConvertConceptDimension())
+	assert.Nil(t, parseConceptDimension())
+	assert.Nil(t, convertConceptDimension())
 
 }
 
 func TestFilterOldObservationFact(t *testing.T) {
 
-	if ListSensitiveConcepts == nil {
-		ListSensitiveConcepts = make(map[string]struct{})
-		ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Benign neoplasms (210-229)\(216) Benign neoplasm of skin\`] = struct{}{}
-	}
+	TestConvertConceptDimension(t)
 
-	assert.Nil(t, FilterOldObservationFact())
+	assert.Nil(t, filterOldObservationFact())
 
 }
 
@@ -133,19 +130,23 @@ func TestFilterPatientDimension(t *testing.T) {
 
 	TestFilterOldObservationFact(t)
 
-	assert.Nil(t, FilterPatientDimension(publicKey))
+	assert.Nil(t, filterPatientDimension(publicKey))
 
 }
 
 func TestCallGenerateDummiesScript(t *testing.T) {
 
-	assert.Nil(t, CallGenerateDummiesScript())
+	TestFilterPatientDimension(t)
+
+	assert.Nil(t, callGenerateDummiesScript())
 
 }
 
 func TestParseDummyToPatient(t *testing.T) {
 
-	assert.Nil(t, ParseDummyToPatient())
+	TestCallGenerateDummiesScript(t)
+
+	assert.Nil(t, parseDummyToPatient())
 
 }
 
@@ -153,36 +154,36 @@ func TestConvertPatientDimension(t *testing.T) {
 
 	TestParseDummyToPatient(t)
 
-	assert.Nil(t, ParsePatientDimension(publicKey))
-	assert.Nil(t, ConvertPatientDimension(publicKey))
+	assert.Nil(t, parsePatientDimension(publicKey))
+	assert.Nil(t, convertPatientDimension(publicKey))
 
 	local.CloseAll()
 }
 
 func TestConvertVisitDimension(t *testing.T) {
 
-	TestFilterOldObservationFact(t)
+	TestParseDummyToPatient(t)
 
-	assert.Nil(t, ParseDummyToPatient())
-	assert.Nil(t, ParsePatientDimension(publicKey))
-	assert.Nil(t, ConvertPatientDimension(publicKey))
+	assert.Nil(t, parseDummyToPatient())
+	assert.Nil(t, parsePatientDimension(publicKey))
+	assert.Nil(t, convertPatientDimension(publicKey))
 
-	assert.Nil(t, ParseVisitDimension())
-	assert.Nil(t, ConvertVisitDimension())
+	assert.Nil(t, parseVisitDimension())
+	assert.Nil(t, convertVisitDimension())
 
 	local.CloseAll()
 }
 
 func TestUpdateChildrenEncryptIDs(t *testing.T) {
-	TablesMedCoOntology = make(map[string]MedCoTableInfo)
-	tableMedCoOntologyConceptEnc := make(map[string]*MedCoOntology)
-	TablesMedCoOntology["test"] = MedCoTableInfo{Sensitive: tableMedCoOntologyConceptEnc}
+	tablesMedCoOntology = make(map[string]medCoTableInfo)
+	tableMedCoOntologyConceptEnc := make(map[string]*medCoOntologyRecord)
+	tablesMedCoOntology["test"] = medCoTableInfo{sensitive: tableMedCoOntologyConceptEnc}
 
-	so0 := MedCoOntology{Fullname: "\\a\\", NodeEncryptID: 0}
-	so1 := MedCoOntology{Fullname: "\\a\\b\\", NodeEncryptID: 1}
-	so2 := MedCoOntology{Fullname: "\\a\\c\\", NodeEncryptID: 2}
-	so3 := MedCoOntology{Fullname: "\\a\\c\\d", NodeEncryptID: 3}
-	so4 := MedCoOntology{Fullname: "\\a\\c\\f", NodeEncryptID: 4}
+	so0 := medCoOntologyRecord{fullname: "\\a\\", nodeEncryptID: 0}
+	so1 := medCoOntologyRecord{fullname: "\\a\\b\\", nodeEncryptID: 1}
+	so2 := medCoOntologyRecord{fullname: "\\a\\c\\", nodeEncryptID: 2}
+	so3 := medCoOntologyRecord{fullname: "\\a\\c\\d", nodeEncryptID: 3}
+	so4 := medCoOntologyRecord{fullname: "\\a\\c\\f", nodeEncryptID: 4}
 
 	tableMedCoOntologyConceptEnc["\\a\\"] = &so0
 	tableMedCoOntologyConceptEnc["\\a\\b\\"] = &so1
@@ -190,101 +191,101 @@ func TestUpdateChildrenEncryptIDs(t *testing.T) {
 	tableMedCoOntologyConceptEnc["\\a\\c\\d"] = &so3
 	tableMedCoOntologyConceptEnc["\\a\\c\\f"] = &so4
 
-	UpdateChildrenEncryptIDs("test")
+	updateChildrenEncryptIDs("test")
 
-	assert.Equal(t, 4, len(TablesMedCoOntology["test"].Sensitive["\\a\\"].ChildrenEncryptIDs))
-	assert.Equal(t, 0, len(TablesMedCoOntology["test"].Sensitive["\\a\\b\\"].ChildrenEncryptIDs))
-	assert.Equal(t, 2, len(TablesMedCoOntology["test"].Sensitive["\\a\\c\\"].ChildrenEncryptIDs))
-	assert.Equal(t, 0, len(TablesMedCoOntology["test"].Sensitive["\\a\\c\\d"].ChildrenEncryptIDs))
-	assert.Equal(t, 0, len(TablesMedCoOntology["test"].Sensitive["\\a\\c\\f"].ChildrenEncryptIDs))
+	assert.Equal(t, 4, len(tablesMedCoOntology["test"].sensitive["\\a\\"].childrenEncryptIDs))
+	assert.Equal(t, 0, len(tablesMedCoOntology["test"].sensitive["\\a\\b\\"].childrenEncryptIDs))
+	assert.Equal(t, 2, len(tablesMedCoOntology["test"].sensitive["\\a\\c\\"].childrenEncryptIDs))
+	assert.Equal(t, 0, len(tablesMedCoOntology["test"].sensitive["\\a\\c\\d"].childrenEncryptIDs))
+	assert.Equal(t, 0, len(tablesMedCoOntology["test"].sensitive["\\a\\c\\f"].childrenEncryptIDs))
 }
 
 func TestStripByLevel(t *testing.T) {
 
 	test := `\SHRINE\Diagnoses\Neoplasms (140-239.99)\Benign neoplasms (210-229.99)\Benign neoplasm of bone and articular cartilage (213)\(213.9) Benign neoplasm of bone and articular cartilage, site unspecified\`
-	result := StripByLevel(test, 1, true)
+	result := stripByLevel(test, 1, true)
 	assert.Equal(t, `\Diagnoses\Neoplasms (140-239.99)\Benign neoplasms (210-229.99)\Benign neoplasm of bone and articular cartilage (213)\(213.9) Benign neoplasm of bone and articular cartilage, site unspecified\`, result)
 
 	test = `\SHRINE\Diagnoses\Neoplasms (140-239.99)\Benign neoplasms (210-229.99)\Benign neoplasm of bone and articular cartilage (213)\(213.9) Benign neoplasm of bone and articular cartilage, site unspecified\`
-	result = StripByLevel(test, 2, true)
+	result = stripByLevel(test, 2, true)
 	assert.Equal(t, `\Neoplasms (140-239.99)\Benign neoplasms (210-229.99)\Benign neoplasm of bone and articular cartilage (213)\(213.9) Benign neoplasm of bone and articular cartilage, site unspecified\`, result)
 
 	test = `\SHRINE\Diagnoses\Neoplasms (140-239.99)\Benign neoplasms (210-229.99)\Benign neoplasm of bone and articular cartilage (213)\(213.9) Benign neoplasm of bone and articular cartilage, site unspecified\`
-	result = StripByLevel(test, 3, true)
+	result = stripByLevel(test, 3, true)
 	assert.Equal(t, `\Benign neoplasms (210-229.99)\Benign neoplasm of bone and articular cartilage (213)\(213.9) Benign neoplasm of bone and articular cartilage, site unspecified\`, result)
 
 	test = `\SHRINE\Diagnoses\Neoplasms (140-239.99)\Benign neoplasms (210-229.99)\Benign neoplasm of bone and articular cartilage (213)\(213.9) Benign neoplasm of bone and articular cartilage, site unspecified\`
-	result = StripByLevel(test, 1, false)
+	result = stripByLevel(test, 1, false)
 	assert.Equal(t, `\SHRINE\Diagnoses\Neoplasms (140-239.99)\Benign neoplasms (210-229.99)\Benign neoplasm of bone and articular cartilage (213)\`, result)
 
 	test = `\SHRINE\Diagnoses\Neoplasms (140-239.99)\Benign neoplasms (210-229.99)\Benign neoplasm of bone and articular cartilage (213)\(213.9) Benign neoplasm of bone and articular cartilage, site unspecified\`
-	result = StripByLevel(test, 2, false)
+	result = stripByLevel(test, 2, false)
 	assert.Equal(t, `\SHRINE\Diagnoses\Neoplasms (140-239.99)\Benign neoplasms (210-229.99)\`, result)
 
 	test = `\SHRINE\Diagnoses\Neoplasms (140-239.99)\Benign neoplasms (210-229.99)\Benign neoplasm of bone and articular cartilage (213)\(213.9) Benign neoplasm of bone and articular cartilage, site unspecified\`
-	result = StripByLevel(test, 10, true)
+	result = stripByLevel(test, 10, true)
 	assert.Equal(t, "", result)
 
 	test = `\SHRINE\Diagnoses\Neoplasms (140-239.99)\Benign neoplasms (210-229.99)\Benign neoplasm of bone and articular cartilage (213)\(213.9) Benign neoplasm of bone and articular cartilage, site unspecified\`
-	result = StripByLevel(test, 6, true)
+	result = stripByLevel(test, 6, true)
 	assert.Equal(t, "", result)
 }
 
 func TestConvertAll(t *testing.T) {
 
-	ListSensitiveConcepts = make(map[string]struct{})
-	ListSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Benign neoplasms (210-229)\(216) Benign neoplasm of skin\`] = struct{}{}
+	listSensitiveConcepts = make(map[string]struct{})
+	listSensitiveConcepts[`\i2b2\Diagnoses\Neoplasms (140-239)\Benign neoplasms (210-229)\(216) Benign neoplasm of skin\`] = struct{}{}
 
-	assert.Nil(t, ConvertLocalOntology(el, 0))
+	assert.Nil(t, convertLocalOntology(el, 0))
 
 	log.LLvl1("--- Finished converting LOCAL_ONTOLOGY ---")
 
-	assert.Nil(t, GenerateMedCoOntology())
+	assert.Nil(t, generateMedCoOntology())
 
 	log.LLvl1("--- Finished generating MEDCO_ONTOLOGY ---")
 
-	if EnabledModifiers {
-		assert.Nil(t, ParseModifierDimension())
-		assert.Nil(t, ConvertModifierDimension())
+	if enableModifiers {
+		assert.Nil(t, parseModifierDimension())
+		assert.Nil(t, convertModifierDimension())
 		log.LLvl1("--- Finished converting MODIFIER_DIMENSION ---")
 	}
 
-	assert.Nil(t, ParseConceptDimension())
-	assert.Nil(t, ConvertConceptDimension())
+	assert.Nil(t, parseConceptDimension())
+	assert.Nil(t, convertConceptDimension())
 
 	log.LLvl1("--- Finished converting CONCEPT_DIMENSION ---")
 
-	assert.Nil(t, FilterOldObservationFact())
+	assert.Nil(t, filterOldObservationFact())
 
 	log.Lvl1("--- Finished filtering OLD_OBSERVATION_FACT ---")
 
-	assert.Nil(t, FilterPatientDimension(publicKey))
+	assert.Nil(t, filterPatientDimension(publicKey))
 
 	log.Lvl1("--- Finished filtering PATIENT_DIMENSION ---")
 
-	assert.Nil(t, CallGenerateDummiesScript())
+	assert.Nil(t, callGenerateDummiesScript())
 
 	log.Lvl1("--- Finished dummies generation ---")
 
-	assert.Nil(t, ParseDummyToPatient())
+	assert.Nil(t, parseDummyToPatient())
 
-	assert.Nil(t, ParsePatientDimension(publicKey))
-	assert.Nil(t, ConvertPatientDimension(publicKey))
+	assert.Nil(t, parsePatientDimension(publicKey))
+	assert.Nil(t, convertPatientDimension(publicKey))
 
 	log.LLvl1("--- Finished converting PATIENT_DIMENSION ---")
 
-	assert.Nil(t, ParseVisitDimension())
-	assert.Nil(t, ConvertVisitDimension())
+	assert.Nil(t, parseVisitDimension())
+	assert.Nil(t, convertVisitDimension())
 
 	log.LLvl1("--- Finished converting VISIT_DIMENSION ---")
 
-	assert.Nil(t, ParseNonSensitiveObservationFact())
-	assert.Nil(t, ConvertNonSensitiveObservationFact())
+	assert.Nil(t, parseNonSensitiveObservationFact())
+	assert.Nil(t, convertNonSensitiveObservationFact())
 
 	log.LLvl1("--- Finished converting non sensitive OBSERVATION_FACT ---")
 
-	assert.Nil(t, ParseSensitiveObservationFact())
-	assert.Nil(t, ConvertSensitiveObservationFact())
+	assert.Nil(t, parseSensitiveObservationFact())
+	assert.Nil(t, convertSensitiveObservationFact())
 
 	log.LLvl1("--- Finished converting sensitive OBSERVATION_FACT ---")
 
@@ -292,5 +293,5 @@ func TestConvertAll(t *testing.T) {
 }
 
 func TestGenerateLoadingDataScript(t *testing.T) {
-	assert.Nil(t, GenerateLoadingDataScriptSensitive(loader.DBSettings{DBhost: "localhost", DBport: 5434, DBname: "i2b2medcosrv0", DBuser: "i2b2", DBpassword: "i2b2"}))
+	assert.Nil(t, generateLoadingDataScriptSensitive(loader.DBSettings{DBhost: "localhost", DBport: 5434, DBname: "i2b2medcosrv0", DBuser: "i2b2", DBpassword: "i2b2"}))
 }
