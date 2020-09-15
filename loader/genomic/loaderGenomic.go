@@ -33,14 +33,11 @@ func init() {
 // DefaultDataPath is the default path for the data folder
 var DefaultDataPath string
 
-// I2B2METADATA path to i2b2metadata schema
-const I2B2METADATA = "i2b2metadata_i2b2."
+// I2B2DEMODATA_SENSITIVE path to i2b2demodata_i2b2_sensitive schema
+var I2B2DEMODATA_SENSITIVE = "i2b2demodata_i2b2_sensitive."
 
-// I2B2DEMODATA path to i2b2demodata schema
-const I2B2DEMODATA = "i2b2demodata_i2b2."
-
-// ONT path to medco_ont schema
-const ONT = "medco_ont."
+// ONT_SENSITIVE path to medco_ont_sensitive schema
+const ONT_SENSITIVE = "medco_ont_sensitive."
 
 // ANNOTATIONS path to genomic_annotations schema
 const ANNOTATIONS = "genomic_annotations."
@@ -49,18 +46,18 @@ const ANNOTATIONS = "genomic_annotations."
 var (
 	OutputFilePath = "genomic/"
 
-	TablenamesOntology = [...]string{ONT + "clinical_sensitive",
-		ONT + "clinical_non_sensitive",
+	TablenamesOntology = [...]string{ONT_SENSITIVE + "clinical_sensitive",
+		ONT_SENSITIVE + "clinical_non_sensitive",
 		ANNOTATIONS + "genomic_annotations",
-		ONT + "sensitive_tagged"}
+		ONT_SENSITIVE + "sensitive_tagged"}
 
-	TablenamesData = [...]string{I2B2DEMODATA + "concept_dimension",
-		I2B2DEMODATA + "patient_mapping",
-		I2B2DEMODATA + "patient_dimension",
-		I2B2DEMODATA + "encounter_mapping",
-		I2B2DEMODATA + "visit_dimension",
-		I2B2DEMODATA + "provider_dimension",
-		I2B2DEMODATA + "observation_fact"}
+	TablenamesData = [...]string{I2B2DEMODATA_SENSITIVE + "concept_dimension",
+		I2B2DEMODATA_SENSITIVE + "patient_mapping",
+		I2B2DEMODATA_SENSITIVE + "patient_dimension",
+		I2B2DEMODATA_SENSITIVE + "encounter_mapping",
+		I2B2DEMODATA_SENSITIVE + "visit_dimension",
+		I2B2DEMODATA_SENSITIVE + "provider_dimension",
+		I2B2DEMODATA_SENSITIVE + "observation_fact"}
 
 	FileBashPath = [...]string{"25-load-ontology.sh",
 		"26-load-data.sh"}
@@ -332,23 +329,23 @@ func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSetti
 	loading += "BEGIN;\n"
 
 	//update table access
-	loading += `INSERT INTO medco_ont.table_access (c_table_cd, c_table_name, c_protected_access, c_hlevel, c_fullname, c_name,
+	loading += `INSERT INTO medco_ont_sensitive.table_access (c_table_cd, c_table_name, c_protected_access, c_hlevel, c_fullname, c_name,
 				c_synonym_cd, c_visualattributes, c_facttablecolumn, c_dimtablename,
         		c_columnname, c_columndatatype, c_operator, c_dimcode, c_tooltip) VALUES
         		('CLINICAL_SENSITIVE', 'CLINICAL_SENSITIVE', 'N', 2, '\medco\clinical\sensitive\', 'MedCo Clinical Sensitive Ontology',
         		'N', 'CA', 'concept_cd', 'concept_dimension', 'concept_path', 'T', 'LIKE', '\medco\clinical\sensitive\', 'MedCo Clinical Sensitive Ontology') ON CONFLICT DO NOTHING;
-    			INSERT INTO medco_ont.table_access (c_table_cd, c_table_name, c_protected_access, c_hlevel, c_fullname, c_name,
+    			INSERT INTO medco_ont_sensitive.table_access (c_table_cd, c_table_name, c_protected_access, c_hlevel, c_fullname, c_name,
         		c_synonym_cd, c_visualattributes, c_facttablecolumn, c_dimtablename,
         		c_columnname, c_columndatatype, c_operator, c_dimcode, c_tooltip) VALUES
         		('CLINICAL_NON_SENSITIVE', 'CLINICAL_NON_SENSITIVE', 'N', 2, '\medco\clinical\nonsensitive\', 'MedCo Clinical Non-Sensitive Ontology',
         		'N', 'CA', 'concept_cd', 'concept_dimension', 'concept_path', 'T', 'LIKE', '\medco\clinical\nonsensitive\', 'MedCo Clinical Non-Sensitive Ontology') ON CONFLICT DO NOTHING;
-    			INSERT INTO medco_ont.table_access (c_table_cd, c_table_name, c_protected_access, c_hlevel, c_fullname, c_name,
+    			INSERT INTO medco_ont_sensitive.table_access (c_table_cd, c_table_name, c_protected_access, c_hlevel, c_fullname, c_name,
         		c_synonym_cd, c_visualattributes, c_facttablecolumn, c_dimtablename,
         		c_columnname, c_columndatatype, c_operator, c_dimcode, c_tooltip) VALUES
 				('GENOMIC', 'GENOMIC', 'N', 1, '\medco\genomic\', 'MedCo Genomic Ontology',
         		'N', 'CA', 'concept_cd', 'concept_dimension', 'concept_path', 'T', 'LIKE', '\medco\genomic\', 'MedCo Genomic Ontology') ON CONFLICT DO NOTHING;` + "\n"
 
-	loading += `CREATE TABLE IF NOT EXISTS medco_ont.clinical_sensitive(
+	loading += `CREATE TABLE IF NOT EXISTS medco_ont_sensitive.clinical_sensitive(
         		c_hlevel numeric(22,0) not null,
         		c_fullname character varying(900) not null,
         		c_name character varying(2000) not null,
@@ -376,13 +373,13 @@ func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSetti
         		c_symbol character varying(50),
         		pcori_basecode character varying(50));
 				
-				ALTER TABLE medco_ont.clinical_sensitive DROP CONSTRAINT IF EXISTS fullname_pk_20;
-    			ALTER TABLE ONLY medco_ont.clinical_sensitive ADD CONSTRAINT fullname_pk_20 PRIMARY KEY (c_fullname);
+				ALTER TABLE medco_ont_sensitive.clinical_sensitive DROP CONSTRAINT IF EXISTS fullname_pk_20;
+    			ALTER TABLE ONLY medco_ont_sensitive.clinical_sensitive ADD CONSTRAINT fullname_pk_20 PRIMARY KEY (c_fullname);
 				
-				ALTER TABLE medco_ont.clinical_sensitive DROP CONSTRAINT IF EXISTS basecode_un_20;
-    			ALTER TABLE ONLY medco_ont.clinical_sensitive ADD CONSTRAINT basecode_un_20 UNIQUE (c_basecode);
+				ALTER TABLE medco_ont_sensitive.clinical_sensitive DROP CONSTRAINT IF EXISTS basecode_un_20;
+    			ALTER TABLE ONLY medco_ont_sensitive.clinical_sensitive ADD CONSTRAINT basecode_un_20 UNIQUE (c_basecode);
 	
-	   			CREATE TABLE IF NOT EXISTS medco_ont.clinical_non_sensitive(
+	   			CREATE TABLE IF NOT EXISTS medco_ont_sensitive.clinical_non_sensitive(
         		c_hlevel numeric(22,0) not null,
         		c_fullname character varying(900) not null,
         		c_name character varying(2000) not null,
@@ -410,14 +407,14 @@ func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSetti
         		c_symbol character varying(50),
         		pcori_basecode character varying(50));
 
-				ALTER TABLE medco_ont.clinical_non_sensitive DROP CONSTRAINT IF EXISTS fullname_pk_21;
-    			ALTER TABLE ONLY medco_ont.clinical_non_sensitive ADD CONSTRAINT fullname_pk_21 PRIMARY KEY (c_fullname);
+				ALTER TABLE medco_ont_sensitive.clinical_non_sensitive DROP CONSTRAINT IF EXISTS fullname_pk_21;
+    			ALTER TABLE ONLY medco_ont_sensitive.clinical_non_sensitive ADD CONSTRAINT fullname_pk_21 PRIMARY KEY (c_fullname);
 
-				ALTER TABLE medco_ont.clinical_non_sensitive DROP CONSTRAINT IF EXISTS basecode_un_21;
-    			ALTER TABLE ONLY medco_ont.clinical_non_sensitive ADD CONSTRAINT basecode_un_21 UNIQUE (c_basecode);
+				ALTER TABLE medco_ont_sensitive.clinical_non_sensitive DROP CONSTRAINT IF EXISTS basecode_un_21;
+    			ALTER TABLE ONLY medco_ont_sensitive.clinical_non_sensitive ADD CONSTRAINT basecode_un_21 UNIQUE (c_basecode);
 	
 	
-    			CREATE TABLE IF NOT EXISTS medco_ont.genomic(
+    			CREATE TABLE IF NOT EXISTS medco_ont_sensitive.genomic(
         		c_hlevel numeric(22,0) not null,
         		c_fullname character varying(900) not null,
         		c_name character varying(2000) not null,
@@ -445,31 +442,31 @@ func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSetti
         		c_symbol character varying(50),
         		pcori_basecode character varying(50));
 
-				ALTER TABLE medco_ont.genomic DROP CONSTRAINT IF EXISTS fullname_pk_22;
-    			ALTER TABLE ONLY medco_ont.genomic ADD CONSTRAINT fullname_pk_22 PRIMARY KEY (c_fullname);
+				ALTER TABLE medco_ont_sensitive.genomic DROP CONSTRAINT IF EXISTS fullname_pk_22;
+    			ALTER TABLE ONLY medco_ont_sensitive.genomic ADD CONSTRAINT fullname_pk_22 PRIMARY KEY (c_fullname);
 				
-				ALTER TABLE medco_ont.genomic DROP CONSTRAINT IF EXISTS basecode_un_22;
-    			ALTER TABLE ONLY medco_ont.genomic ADD CONSTRAINT basecode_un_22 UNIQUE (c_basecode);` + "\n"
+				ALTER TABLE medco_ont_sensitive.genomic DROP CONSTRAINT IF EXISTS basecode_un_22;
+    			ALTER TABLE ONLY medco_ont_sensitive.genomic ADD CONSTRAINT basecode_un_22 UNIQUE (c_basecode);` + "\n"
 
-	loading += `INSERT INTO medco_ont.genomic (c_hlevel, c_fullname, c_name, c_synonym_cd, c_visualattributes, c_totalnum,
+	loading += `INSERT INTO medco_ont_sensitive.genomic (c_hlevel, c_fullname, c_name, c_synonym_cd, c_visualattributes, c_totalnum,
         		c_facttablecolumn, c_tablename, c_columnname, c_columndatatype, c_operator, c_dimcode, c_comment, c_tooltip, update_date,
         		download_date, import_date, valuetype_cd, m_applied_path) values
         		('1', '\medco\genomic\', 'MedCo Genomic Ontology', 'N', 'CA', '0', 'concept_cd', 'concept_dimension', 'concept_path',
         		'T', 'LIKE', '\medco\genomic\', 'MedCo Genomic Ontology', '\medco\genomic\',
         		'NOW()', 'NOW()', 'NOW()', 'GEN', '@') ON CONFLICT DO NOTHING;
-            	INSERT INTO medco_ont.genomic (c_hlevel, c_fullname, c_name, c_synonym_cd, c_visualattributes, c_totalnum, c_basecode,
+            	INSERT INTO medco_ont_sensitive.genomic (c_hlevel, c_fullname, c_name, c_synonym_cd, c_visualattributes, c_totalnum, c_basecode,
         		c_facttablecolumn, c_tablename, c_columnname, c_columndatatype, c_operator, c_dimcode, c_comment, c_tooltip, update_date,
         		download_date, import_date, valuetype_cd, m_applied_path) values
         		('2', '\medco\genomic\annotations_Hugo_Symbol\', 'Gene Name', 'N', 'LA', '0', 'GEN:hugo_gene_symbol', 'concept_cd', 'concept_dimension', 'concept_path',
         		'T', 'LIKE', '\medco\genomic\annotations_Hugo_Symbol\', 'Gene Name', '\medco\genomic\annotations_Hugo_Symbol\',
         		'NOW()', 'NOW()', 'NOW()', 'GEN', '@') ON CONFLICT DO NOTHING;
-    			INSERT INTO medco_ont.genomic (c_hlevel, c_fullname, c_name, c_synonym_cd, c_visualattributes, c_totalnum, c_basecode,
+    			INSERT INTO medco_ont_sensitive.genomic (c_hlevel, c_fullname, c_name, c_synonym_cd, c_visualattributes, c_totalnum, c_basecode,
         		c_facttablecolumn, c_tablename, c_columnname, c_columndatatype, c_operator, c_dimcode, c_comment, c_tooltip, update_date,
         		download_date, import_date, valuetype_cd, m_applied_path) values
         		('2', '\medco\genomic\annotations_Protein_position\', 'Protein Position', 'N', 'LA', '0', 'GEN:protein_change', 'concept_cd', 'concept_dimension', 'concept_path',
         		'T', 'LIKE', '\medco\genomic\annotations_Protein_position\', 'Protein Position', '\medco\genomic\annotations_Protein_position\',
         		'NOW()', 'NOW()', 'NOW()', 'GEN', '@') ON CONFLICT DO NOTHING;
-    			INSERT INTO medco_ont.genomic (c_hlevel, c_fullname, c_name, c_synonym_cd, c_visualattributes, c_totalnum, c_basecode,
+    			INSERT INTO medco_ont_sensitive.genomic (c_hlevel, c_fullname, c_name, c_synonym_cd, c_visualattributes, c_totalnum, c_basecode,
 				c_facttablecolumn, c_tablename, c_columnname, c_columndatatype, c_operator, c_dimcode, c_comment, c_tooltip, update_date,
         		download_date, import_date, valuetype_cd, m_applied_path) values
         		('2', '\medco\genomic\variant\', 'Variant Name', 'N', 'LA', '0', 'GEN:variant_name', 'concept_cd', 'concept_dimension', 'concept_path',
@@ -479,18 +476,18 @@ func GenerateLoadingOntologyScript(i2b2DB loader.DBSettings, gaDB loader.DBSetti
 	for i := 0; i < len(TablenamesOntology); i++ {
 
 		//TODO: Delete this please
-		if TablenamesOntology[i] != ONT+"non_sensitive_clear" && TablenamesOntology[i] != ANNOTATIONS+"genomic_annotations" {
+		if TablenamesOntology[i] != ONT_SENSITIVE+"non_sensitive_clear" && TablenamesOntology[i] != ANNOTATIONS+"genomic_annotations" {
 			loading += "TRUNCATE " + TablenamesOntology[i] + ";\n"
 			loading += `\copy ` + TablenamesOntology[i] + ` FROM '` + FilePathsOntology[i] + `' ESCAPE '"' DELIMITER ',' CSV;` + "\n"
 		}
 	}
 	loading += "\n"
 
-	loading += `UPDATE medco_ont.table_access SET c_visualattributes = 'CH ' WHERE c_table_cd = 'E2ETEST';` + "\n"
+	loading += `UPDATE medco_ont_sensitive.table_access SET c_visualattributes = 'CH ' WHERE c_table_cd = 'E2ETEST';` + "\n"
 
-	loading += `ALTER TABLE medco_ont.genomic OWNER TO $I2B2_DB_USER;
-    			ALTER TABLE medco_ont.clinical_sensitive OWNER TO $I2B2_DB_USER;
-    			ALTER TABLE medco_ont.clinical_non_sensitive OWNER TO $I2B2_DB_USER;` + "\n"
+	loading += `ALTER TABLE medco_ont_sensitive.genomic OWNER TO $I2B2_DB_USER;
+    			ALTER TABLE medco_ont_sensitive.clinical_sensitive OWNER TO $I2B2_DB_USER;
+    			ALTER TABLE medco_ont_sensitive.clinical_non_sensitive OWNER TO $I2B2_DB_USER;` + "\n"
 
 	loading += "COMMIT;\n"
 	loading += "EOSQL"
@@ -803,7 +800,7 @@ func GenerateOntologyFiles(group *onet.Roster, entryPointIdx int, fOntClinical, 
 				// the number of genomic ids does not match the number of distinct mutation because if the RA is too big we discard the mutation
 				genomicID, err := generateGenomicID(indexGenVariant, record)
 
-				// if genomic id already exist we don't need to add it to the medco_ont.genomic_annotations
+				// if genomic id already exist we don't need to add it to the medco_ont_sensitive.genomic_annotations
 				if _, ok := allSensitiveIDs[genomicID]; ok == false && err == nil {
 					allSensitiveIDs[genomicID] = SensitiveIDValue{CP: ConceptPath{Field: strconv.FormatInt(genomicID, 10), Record: ""}, Annotation: generateMedCoOntologyGenomicAnnotation(headerGenomic, record)}
 				}
@@ -1096,7 +1093,7 @@ func writeMedCoOntologyEncHeader() error {
 func writeMedCoOntologyEnc(el string) error {
 	el = SanitizeHeader(el)
 
-	/*clinicalSensitive := `INSERT INTO medco_ont.clinical_sensitive VALUES (3, '\medco\clinical\sensitive\` + el + `\', '` + el + `', 'N', 'CA', NULL, NULL, NULL, 'concept_cd', 'concept_dimension', 'concept_path', 'T', 'LIKE',
+	/*clinicalSensitive := `INSERT INTO medco_ont_sensitive.clinical_sensitive VALUES (3, '\medco\clinical\sensitive\` + el + `\', '` + el + `', 'N', 'CA', NULL, NULL, NULL, 'concept_cd', 'concept_dimension', 'concept_path', 'T', 'LIKE',
 	  '\medco\clinical\sensitive\` + el + `\', 'Sensitive field encrypted by Unlynx', '\medco\clinical\sensitive\` + el + `\',
 	   'NOW()', NULL, NULL, NULL, 'ENC_ID', '@', NULL, NULL, NULL, NULL);` + "\n"*/
 
@@ -1115,7 +1112,7 @@ func writeMedCoOntologyEnc(el string) error {
 func writeMedCoOntologyLeafEnc(field, el string, id int64) error {
 	field = SanitizeHeader(field)
 
-	/*clinicalSensitive := `INSERT INTO medco_ont.clinical_sensitive VALUES (4, '\medco\clinical\sensitive\` + field + `\` + el + `\', '` + el + `', 'N', 'LA', NULL, 'ENC_ID:` + strconv.FormatInt(id, 10) + `', NULL, 'concept_cd', 'concept_dimension', 'concept_path', 'T', 'LIKE',
+	/*clinicalSensitive := `INSERT INTO medco_ont_sensitive.clinical_sensitive VALUES (4, '\medco\clinical\sensitive\` + field + `\` + el + `\', '` + el + `', 'N', 'LA', NULL, 'ENC_ID:` + strconv.FormatInt(id, 10) + `', NULL, 'concept_cd', 'concept_dimension', 'concept_path', 'T', 'LIKE',
 	  '\medco\clinical\sensitive\` + field + `\` + el + `\', 'Sensitive value encrypted by Unlynx',  '\medco\clinical\sensitive\` + field + `\` + el + `\',
 	   'NOW()', NULL, NULL, NULL, 'ENC_ID', '@', NULL, NULL, NULL, NULL);` + "\n"*/
 
@@ -1166,7 +1163,7 @@ func writeMedCoOntologyClear(el string) error {
 func writeMedCoOntologyLeafClear(field, el string, id int64) error {
 	field = SanitizeHeader(field)
 
-	/*clinical := `INSERT INTO medco_ont.clinical_non_sensitive VALUES (4, '\medco\clinical\nonsensitive\` + field + `\` + el + `\', '` + el + `', 'N', 'LA', NULL, 'CLEAR:` + strconv.FormatInt(id, 10) + `', NULL, 'concept_cd', 'concept_dimension', 'concept_path', 'T', 'LIKE',
+	/*clinical := `INSERT INTO medco_ont_sensitive.clinical_non_sensitive VALUES (4, '\medco\clinical\nonsensitive\` + field + `\` + el + `\', '` + el + `', 'N', 'LA', NULL, 'CLEAR:` + strconv.FormatInt(id, 10) + `', NULL, 'concept_cd', 'concept_dimension', 'concept_path', 'T', 'LIKE',
 	  '\medco\clinical\nonsensitive\` + field + `\` + el + `\', 'Non-sensitive value',  '\medco\clinical\sensitive\` + field + `\` + el + `\',
 	   'NOW()', NULL, NULL, NULL, 'CLEAR', '@', NULL, NULL, NULL, NULL);` + "\n"*/
 
@@ -1407,7 +1404,7 @@ func writeMedCoSensitiveTagged(list []libunlynx.GroupingKey, keyForSensitiveIDs 
 			}
 		}
 
-		/*sensitive := `INSERT INTO medco_ont.sensitive_tagged VALUES (2, '\medco\tagged\` + string(el) + `\', '', 'N', 'LA ', NULL, 'TAG_ID:` + strconv.FormatUint(int64(tagID), 10) + `', NULL, 'concept_cd', 'concept_dimension', 'concept_path', 'T', 'LIKE',
+		/*sensitive := `INSERT INTO medco_ont_sensitive.sensitive_tagged VALUES (2, '\medco\tagged\` + string(el) + `\', '', 'N', 'LA ', NULL, 'TAG_ID:` + strconv.FormatUint(int64(tagID), 10) + `', NULL, 'concept_cd', 'concept_dimension', 'concept_path', 'T', 'LIKE',
 		'\medco\tagged\` + string(el) + `\', NULL, NULL, 'NOW()', NULL, NULL, NULL, 'TAG_ID', '@', NULL, NULL, NULL, NULL);` + "\n"*/
 
 		sensitive := `"2","\medco\tagged\` + string(el) + `\","""","N","LA",,"TAG_ID:` + strconv.FormatInt(int64(tagID), 10) + `",,"concept_cd","concept_dimension","concept_path","T","LIKE","\medco\tagged\` + string(el) + `\",,,"NOW()",,,,"TAG_ID","@",,,,` + "\n"
